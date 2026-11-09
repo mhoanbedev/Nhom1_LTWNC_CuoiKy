@@ -136,7 +136,7 @@ Mô hình gồm 21 entity TypeORM, cùng kế thừa lớp trừu tượng AppBa
 | **JobTranslation** | jobId, locale, title, slug, description, requirements, benefits, searchText | Nội dung dạng Markdown; index trigram trên searchText, viết bằng SQL trong migration vì decorator của TypeORM không khai báo được |
 | **JobSkill** | jobId, skillId, isRequired | Phân biệt kỹ năng bắt buộc và ưu tiên, dùng cho điểm khớp |
 | **Skill** | slug, nameVi, nameEn | Danh mục |
-| **Industry** | nameVi, nameEn | Danh mục |
+| **Industry** | slug, nameVi, nameEn | Danh mục |
 | **Location** | code, nameVi, nameEn | 34 tỉnh/thành sau sắp xếp năm 2025 |
 | **CandidateProfile** | userId (unique), headline, phone, dateOfBirth, locationId, about, links (JSON), completedSteps | completedSteps là mảng ProfileStep |
 | **Education** | profileId, school, major, degree, startDate, endDate, gpa |  |
@@ -578,6 +578,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | Database | `DATABASE_URL` (chuỗi pooled của Neon, app dùng), `DATABASE_DIRECT_URL` (chuỗi direct của Neon, chỉ migration dùng), `DB_SSL` (bật khi kết nối Neon) |
 | Docker dev | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` |
 | Auth | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN` (15m), `REFRESH_TOKEN_EXPIRES_IN` (7d), `REFRESH_TOKEN_GRACE_SECONDS` (30), `GOOGLE_CLIENT_ID` |
+| Seed | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` (chỉ `make seed` dùng) |
 | Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
 | Revalidate | `REVALIDATE_URL`, `REVALIDATE_SECRET` |
 | Mail (tùy chọn) | `MAIL_HOST`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` |
@@ -696,7 +697,7 @@ Webhook gửi sau khi transaction đã commit, không chặn response, thử l�
 
 ### Seed dữ liệu
 
-Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chung `data-source.ts` với app. Script chạy lại được nhiều lần: xóa sạch dữ liệu rồi tạo lại. Dùng `@faker-js/faker` với seed cố định để lần nào dữ liệu cũng giống nhau. Mật khẩu demo dùng chung và ghi trong README.
+Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chung `data-source.ts` với app. Script chạy lại được nhiều lần: dữ liệu demo xóa sạch rồi tạo lại; danh mục (kỹ năng, ngành, tỉnh/thành) thì upsert theo `slug`/`code` để id không đổi; admin lấy email và mật khẩu từ `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` và chỉ cập nhật chính tài khoản admin có sẵn (DB có index `uq_users_single_admin` chặn admin thứ hai). Dùng `@faker-js/faker` với seed cố định để lần nào dữ liệu cũng giống nhau. Mật khẩu demo dùng chung và ghi trong README.
 
 | Dữ liệu | Số lượng | Ghi chú |
 | --- | --- | --- |
@@ -853,7 +854,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `feat(api): refresh token xoay vòng, đăng xuất`
 - [ ] `feat(api): /auth/me và đổi mật khẩu`
 - [x] `feat(api): đăng nhập Google`: tạo OAuth client Google ở bước này
-- [ ] `feat(api): danh mục /meta, seed admin, kỹ năng, tỉnh/thành`
+- [x] `feat(api): danh mục /meta, seed admin, kỹ năng, tỉnh/thành`
 - [ ] `feat(api): giới hạn tần suất cho auth`
 
 **Bước 3 – Companies, Jobs** (`feat/api-jobs`)

@@ -22,7 +22,8 @@
     "migration:show": "npm run typeorm -- migration:show",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:create": "typeorm-ts-node-commonjs migration:create",
-    "migration:run:prod": "typeorm -d dist/database/data-source.js migration:run"
+    "migration:run:prod": "typeorm -d dist/database/data-source.js migration:run",
+    "seed": "ts-node src/database/seeds/index.ts"
   },
   "dependencies": {
     "@ltwnc/shared": "*",

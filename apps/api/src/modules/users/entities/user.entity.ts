@@ -11,6 +11,8 @@ import { Column, Entity, Index } from 'typeorm';
 import { AppBaseEntity } from '../../../common/entities/app-base.entity';
 
 @Entity('users')
+/** Hệ thống chỉ có đúng 1 admin (tạo qua seed): DB chặn luôn dòng ADMIN thứ hai. */
+@Index('uq_users_single_admin', ['role'], { unique: true, where: `"role" = 'ADMIN'` })
 export class User extends AppBaseEntity {
   /** Luôn lưu chữ thường (chuẩn hoá ở service) để unique không phân biệt hoa thường. */
   @Index('uq_users_email', { unique: true })

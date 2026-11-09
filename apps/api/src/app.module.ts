@@ -20,6 +20,7 @@ import { jwtConfig } from './config/jwt.config';
 import { validateEnv } from './config/env.schema';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -45,6 +46,7 @@ import { UsersModule } from './modules/users/users.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    MetaModule,
   ],
   providers: [
     // Khai bằng APP_* thay vì app.useGlobal*() để chạy cả trong test e2e và dùng được DI.

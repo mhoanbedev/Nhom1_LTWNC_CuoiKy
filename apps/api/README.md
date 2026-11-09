@@ -8,7 +8,7 @@ Cần Node.js 24, Docker Desktop đang chạy và `make` (trên Windows dùng Gi
 
 ```bash
 cd apps/api
-make setup   # cài dependency, tạo .env, bật Postgres, chạy migration, in thông số kết nối
+make setup   # cài dependency, tạo .env, bật Postgres, chạy migration, seed, in thông số kết nối
 make dev     # chạy API ở http://localhost:4000/api/v1
 ```
 
@@ -20,7 +20,7 @@ Gõ `make` để xem đầy đủ.
 
 | Lệnh | Việc làm |
 | --- | --- |
-| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres, chạy migration |
+| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres, chạy migration, seed |
 | `make env` | Tạo `.env` từ `.env.example` hoặc bổ sung biến còn thiếu |
 | `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
 | `make logs` / `make ps` | Xem log / trạng thái container |
@@ -30,6 +30,7 @@ Gõ `make` để xem đầy đủ.
 | `make migration-show` | Liệt kê migration và trạng thái đã chạy |
 | `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
 | `make migration-create name=TenMoTa` | Tạo migration rỗng để viết SQL tay |
+| `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
 | `make lint` / `make format` / `make typecheck` | Kiểm tra và định dạng code |
@@ -44,6 +45,12 @@ Gõ `make` để xem đầy đủ.
 | Swagger UI | `http://localhost:4000/api/docs` (file: `/api/docs/openapi.json`) |
 | Health check | `http://localhost:4000/api/v1/health` |
 | PostgreSQL (Docker) | `localhost:5435` (5432–5434 đã có Postgres khác trên máy dùng) |
+
+Tài khoản demo sau `make seed`:
+
+| Vai trò | Email | Mật khẩu |
+| --- | --- | --- |
+| Admin (duy nhất) | `admin@demo.vn` | `Demo@2026` |
 
 Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).
 
@@ -61,3 +68,4 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `REFRESH_TOKEN_EXPIRES_IN` | Thời hạn refresh token, vd `7d` |
 | `REFRESH_TOKEN_GRACE_SECONDS` | Khoảng ân hạn khi xoay refresh token (giây), mặc định 30 |
 | `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Chỉ `make seed` dùng: tài khoản admin duy nhất. Chạy seed lại với giá trị khác thì cập nhật chính admin đó |
