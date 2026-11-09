@@ -1,0 +1,9 @@
+# Giữ LF trong repo để Prettier/ESLint không báo lỗi xuống dòng trên Windows
+* text=auto eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
