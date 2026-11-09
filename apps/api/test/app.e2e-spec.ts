@@ -6,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { z } from 'zod';
 import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/app.setup';
 import { Lang } from '../src/common/decorators/lang.decorator';
 import { AppException } from '../src/common/exceptions/app.exception';
 
@@ -57,7 +58,7 @@ describe('Lớp dùng chung (e2e)', () => {
     }).compile();
     moduleRef.useLogger(false);
     app = moduleRef.createNestApplication({ logger: false });
-    app.setGlobalPrefix('api/v1');
+    configureApp(app);
     await app.init();
   });
 

@@ -41,6 +41,8 @@ Gõ `make` để xem đầy đủ.
 | Thành phần | Địa chỉ |
 | --- | --- |
 | API | `http://localhost:4000/api/v1` |
+| Swagger UI | `http://localhost:4000/api/docs` (file: `/api/docs/openapi.json`) |
+| Health check | `http://localhost:4000/api/v1/health` |
 | PostgreSQL (Docker) | `localhost:5435` (5432–5434 đã có Postgres khác trên máy dùng) |
 
 Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).

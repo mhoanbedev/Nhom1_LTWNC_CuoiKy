@@ -24,5 +24,6 @@
   "APPLICATION_DUPLICATE": "You have already applied to this job",
   "APPLICATION_STATUS_CONFLICT": "The application status was just changed by someone else, please reload",
   "TOO_MANY_REQUESTS": "Too many requests, please try again later",
-  "INTERNAL_ERROR": "Something went wrong, please try again later"
+  "INTERNAL_ERROR": "Something went wrong, please try again later",
+  "SERVICE_UNAVAILABLE": "The service is temporarily unavailable, please try again later"
 }

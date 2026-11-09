@@ -543,6 +543,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | APPLICATION\_STATUS\_CONFLICT | 409 | Người khác vừa đổi trạng thái đơn |
 | TOO\_MANY\_REQUESTS | 429 | Vượt giới hạn tần suất |
 | INTERNAL\_ERROR | 500 | Lỗi không lường trước, không lộ stack trace |
+| SERVICE\_UNAVAILABLE | 503 | `/health` không kết nối được database (Render coi là server lỗi) |
 
 ### Cấu trúc NestJS (nhóm 6 và 7)
 
@@ -561,7 +562,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 
 - Bật `helmet`, CORS chỉ cho domain frontend (`FRONTEND_URL`), giới hạn kích thước body.
 - Validate biến môi trường bằng Zod lúc khởi động: thiếu biến thì app không chạy.
-- Swagger ở `/api/docs` có Bearer auth, mỗi module một tag, có ví dụ response.
+- Swagger ở `/api/docs` (file `/api/docs/openapi.json`) có Bearer auth, mỗi module một tag, response mô tả đúng dạng `{ data }` qua `@ApiDataResponse` và lỗi qua `@ApiErrorResponses`.
 - Mọi danh sách đều phân trang bằng `skip`/`take` và `findAndCount`. Chỉ `select` trường cần, nạp quan hệ bằng `relations` hoặc `leftJoinAndSelect` thay vì query trong vòng lặp, để tránh N+1.
 - `/meta/*` gửi `Cache-Control` 1 ngày.
 

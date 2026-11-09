@@ -24,5 +24,6 @@
   "APPLICATION_DUPLICATE": "Bạn đã ứng tuyển vào tin này",
   "APPLICATION_STATUS_CONFLICT": "Trạng thái hồ sơ vừa được người khác thay đổi, vui lòng tải lại",
   "TOO_MANY_REQUESTS": "Bạn thao tác quá nhanh, vui lòng thử lại sau",
-  "INTERNAL_ERROR": "Đã có lỗi xảy ra, vui lòng thử lại sau"
+  "INTERNAL_ERROR": "Đã có lỗi xảy ra, vui lòng thử lại sau",
+  "SERVICE_UNAVAILABLE": "Hệ thống tạm thời không sẵn sàng, vui lòng thử lại sau"
 }

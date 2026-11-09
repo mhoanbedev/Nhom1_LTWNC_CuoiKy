@@ -14,6 +14,7 @@ import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
 import { validateEnv } from './config/env.schema';
 import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { DatabaseModule } from './database/database.module';
       resolvers: [],
     }),
     DatabaseModule,
+    HealthModule,
   ],
   providers: [
     // Khai bằng APP_* thay vì app.useGlobal*() để chạy cả trong test e2e và dùng được DI.
