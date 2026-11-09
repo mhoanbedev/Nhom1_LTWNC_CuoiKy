@@ -1,8 +1,9 @@
 import { join } from 'node:path';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { DEFAULT_LOCALE } from '@ltwnc/shared';
 import { I18nModule } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -15,6 +16,8 @@ import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { appConfig } from './config/app.config';
 import { googleConfig } from './config/google.config';
+import { rateLimitConfig } from './config/rate-limit.config';
+import { buildThrottlerOptions } from './common/rate-limit/rate-limit';
 import { databaseConfig } from './config/database.config';
 import { jwtConfig } from './config/jwt.config';
 import { validateEnv } from './config/env.schema';
@@ -32,7 +35,7 @@ import { UsersModule } from './modules/users/users.module';
       // Chạy từ apps/api nên đọc apps/api/.env; trên Render không có file, env lấy từ dashboard.
       envFilePath: '.env',
       validate: validateEnv,
-      load: [appConfig, databaseConfig, jwtConfig, googleConfig],
+      load: [appConfig, databaseConfig, jwtConfig, googleConfig, rateLimitConfig],
     }),
     I18nModule.forRoot({
       fallbackLanguage: DEFAULT_LOCALE,
@@ -42,6 +45,11 @@ import { UsersModule } from './modules/users/users.module';
       resolvers: [],
     }),
     ScheduleModule.forRoot(),
+    // Guard không global: chỉ route gắn @AuthRateLimit/@LoginRateLimit bị giới hạn.
+    ThrottlerModule.forRootAsync({
+      inject: [rateLimitConfig.KEY],
+      useFactory: (config: ConfigType<typeof rateLimitConfig>) => buildThrottlerOptions(config),
+    }),
     DatabaseModule,
     HealthModule,
     UsersModule,

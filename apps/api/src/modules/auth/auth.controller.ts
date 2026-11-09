@@ -5,6 +5,7 @@ import { ClientInfo, type RequestClientInfo } from '../../common/decorators/clie
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Lang } from '../../common/decorators/lang.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { AuthRateLimit, LoginRateLimit } from '../../common/rate-limit/rate-limit';
 import { ApiDataResponse, ApiErrorResponses } from '../../common/swagger/api-response.decorators';
 import type { RequestUser } from '../../common/types/request-user';
 import { AuthService } from './auth.service';
@@ -25,10 +26,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @AuthRateLimit()
   @Post('register/candidate')
   @ApiOperation({ summary: 'Đăng ký tài khoản ứng viên, trả token như đăng nhập' })
   @ApiDataResponse(AuthResponseDto, { status: HttpStatus.CREATED })
-  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT)
+  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT, HttpStatus.TOO_MANY_REQUESTS)
   registerCandidate(
     @Body() body: RegisterCandidateDto,
     @Lang() lang: Locale,
@@ -38,16 +40,23 @@ export class AuthController {
   }
 
   @Public()
+  @LoginRateLimit()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập bằng email và mật khẩu (Auth.js Credentials gọi)' })
   @ApiDataResponse(AuthResponseDto)
-  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.TOO_MANY_REQUESTS,
+  )
   login(@Body() body: LoginDto, @ClientInfo() client: RequestClientInfo): Promise<AuthResponse> {
     return this.authService.login(body, client);
   }
 
   @Public()
+  @AuthRateLimit()
   @Post('oauth/google')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -60,6 +69,7 @@ export class AuthController {
     HttpStatus.BAD_REQUEST,
     HttpStatus.UNAUTHORIZED,
     HttpStatus.FORBIDDEN,
+    HttpStatus.TOO_MANY_REQUESTS,
     HttpStatus.SERVICE_UNAVAILABLE,
   )
   loginWithGoogle(
@@ -71,6 +81,7 @@ export class AuthController {
   }
 
   @Public()
+  @AuthRateLimit()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -79,7 +90,12 @@ export class AuthController {
       'Token cũ bị thu hồi. Gửi lại token đã thu hồi (ngoài 30 giây ân hạn) thì cả phiên bị thu hồi và trả 401 AUTH_REFRESH_REUSED.',
   })
   @ApiDataResponse(AuthResponseDto)
-  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.TOO_MANY_REQUESTS,
+  )
   refresh(
     @Body() body: RefreshTokenDto,
     @ClientInfo() client: RequestClientInfo,

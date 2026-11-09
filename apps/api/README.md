@@ -67,5 +67,7 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `JWT_ACCESS_EXPIRES_IN` | Thời hạn access token, vd `15m` |
 | `REFRESH_TOKEN_EXPIRES_IN` | Thời hạn refresh token, vd `7d` |
 | `REFRESH_TOKEN_GRACE_SECONDS` | Khoảng ân hạn khi xoay refresh token (giây), mặc định 30 |
+| `RATE_LIMIT_AUTH_PER_MINUTE` | Số request/phút trên một IP cho đăng ký, đăng nhập, refresh, Google; mặc định 30 |
+| `RATE_LIMIT_LOGIN_PER_EMAIL` | Số lần đăng nhập trong 15 phút cho một email (chặn dò mật khẩu); mặc định 10 |
 | `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Chỉ `make seed` dùng: tài khoản admin duy nhất. Chạy seed lại với giá trị khác thì cập nhật chính admin đó |

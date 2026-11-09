@@ -19,6 +19,8 @@ export const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: duration('15m'),
   REFRESH_TOKEN_EXPIRES_IN: duration('7d'),
   REFRESH_TOKEN_GRACE_SECONDS: z.coerce.number().int().min(0).max(300).default(30),
+  RATE_LIMIT_AUTH_PER_MINUTE: z.coerce.number().int().min(1).default(30),
+  RATE_LIMIT_LOGIN_PER_EMAIL: z.coerce.number().int().min(1).default(10),
   GOOGLE_CLIENT_ID: z
     .string()
     .regex(

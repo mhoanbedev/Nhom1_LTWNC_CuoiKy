@@ -301,7 +301,7 @@ Recruiter chỉ đăng ký được qua form, vì cần nhập thông tin công 
 - `JwtStrategy.validate()` luôn đọc user từ DB: user không còn thì 401, bị khóa thì 403. Role lấy từ DB chứ không lấy từ payload. Token có iat trước passwordChangedAt cũng trả 401 AUTH\_TOKEN\_INVALID, nên đổi mật khẩu vô hiệu ngay access token cũ.
 - Đăng ký: `POST /auth/register/candidate` và `POST /auth/register/recruiter` (kèm thông tin công ty). Email trùng trả 409 `AUTH_EMAIL_TAKEN`.
 - Mật khẩu tối thiểu 8 ký tự, có cả chữ và số, băm bằng argon2id.
-- Giới hạn tần suất cho `/auth/login`, `/auth/register/*` và `/auth/refresh`, vượt thì trả 429.
+- Giới hạn tần suất cho `/auth/login`, `/auth/register/*`, `/auth/refresh` và `/auth/oauth/google`, vượt thì trả 429 `TOO_MANY_REQUESTS` kèm header `Retry-After`. Hai lớp: theo IP cho từng route (`RATE_LIMIT_AUTH_PER_MINUTE`, mặc định 30/phút) và riêng đăng nhập theo email (`RATE_LIMIT_LOGIN_PER_EMAIL`, mặc định 10 lần/15 phút). Lớp theo email cần thiết vì Auth.js gọi `/auth/login` từ server Next, mọi người dùng có thể chung một IP.
 - Mã lỗi: 400 `AUTH_GOOGLE_EMAIL_UNVERIFIED`, 401 `AUTH_INVALID_CREDENTIALS`, 401 `AUTH_TOKEN_INVALID`, 401 `AUTH_REFRESH_INVALID`, 401 `AUTH_REFRESH_REUSED`, 401 `AUTH_GOOGLE_TOKEN_INVALID`, 403 `AUTH_ACCOUNT_LOCKED`.
 
 ## 7. Danh sách API
@@ -564,7 +564,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 
 ### Bảo mật, cấu hình, hiệu năng
 
-- Bật `helmet`, CORS chỉ cho domain frontend (`FRONTEND_URL`), giới hạn kích thước body.
+- Bật `helmet` (trang Swagger tắt CSP để giao diện chạy được), CORS chỉ cho domain frontend (`FRONTEND_URL`), giới hạn kích thước body (mặc định 100 KB của Express). Production bật `trust proxy` 1 hop vì Render đặt API sau proxy.
 - Validate biến môi trường bằng Zod lúc khởi động: thiếu biến thì app không chạy.
 - Swagger ở `/api/docs` (file `/api/docs/openapi.json`) có Bearer auth, mỗi module một tag, response mô tả đúng dạng `{ data }` qua `@ApiDataResponse` và lỗi qua `@ApiErrorResponses`.
 - Mọi danh sách đều phân trang bằng `skip`/`take` và `findAndCount`. Chỉ `select` trường cần, nạp quan hệ bằng `relations` hoặc `leftJoinAndSelect` thay vì query trong vòng lặp, để tránh N+1.
@@ -578,6 +578,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | Database | `DATABASE_URL` (chuỗi pooled của Neon, app dùng), `DATABASE_DIRECT_URL` (chuỗi direct của Neon, chỉ migration dùng), `DB_SSL` (bật khi kết nối Neon) |
 | Docker dev | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` |
 | Auth | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN` (15m), `REFRESH_TOKEN_EXPIRES_IN` (7d), `REFRESH_TOKEN_GRACE_SECONDS` (30), `GOOGLE_CLIENT_ID` |
+| Giới hạn tần suất | `RATE_LIMIT_AUTH_PER_MINUTE` (30), `RATE_LIMIT_LOGIN_PER_EMAIL` (10) |
 | Seed | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` (chỉ `make seed` dùng) |
 | Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
 | Revalidate | `REVALIDATE_URL`, `REVALIDATE_SECRET` |
@@ -855,7 +856,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `feat(api): /auth/me và đổi mật khẩu`
 - [x] `feat(api): đăng nhập Google`: tạo OAuth client Google ở bước này
 - [x] `feat(api): danh mục /meta, seed admin, kỹ năng, tỉnh/thành`
-- [ ] `feat(api): giới hạn tần suất cho auth`
+- [x] `feat(api): giới hạn tần suất cho auth`
 
 **Bước 3 – Companies, Jobs** (`feat/api-jobs`)
 
