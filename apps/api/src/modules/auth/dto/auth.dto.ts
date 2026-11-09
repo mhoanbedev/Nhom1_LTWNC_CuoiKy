@@ -50,3 +50,5 @@ export class AuthResponseDto extends createZodDto(
     user: authUserSchema,
   }),
 ) {}
+
+export class AvatarResultDto extends createZodDto(z.object({ avatarUrl: z.url() })) {}

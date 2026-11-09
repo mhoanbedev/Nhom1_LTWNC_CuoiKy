@@ -353,7 +353,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | PATCH | /me/cvs/:id/default | Candidate |  |
 | DELETE | /me/cvs/:id | Candidate | Xóa mềm |
 | GET | /me/saved-jobs | Candidate |  |
-| PUT, DELETE | /me/saved-jobs/:jobId | Candidate | Idempotent |
+| PUT, DELETE | /me/saved-jobs/:jobId | Candidate | Idempotent, trả 204. Chỉ lưu được tin đang công khai (không thì 404). Danh sách vẫn hiện tin đã đóng hay hết hạn (`isAcceptingApplications: false`), bỏ tin bị ẩn hay công ty bị thu hồi duyệt |
 | POST | /jobs/:jobId/applications | Candidate | Body `{ cvFileId, coverLetter? }` |
 | GET | /me/applications, /me/applications/:id | Candidate | Kèm lịch sử trạng thái, không có ghi chú nội bộ |
 | POST | /me/applications/:id/withdraw | Candidate |  |
@@ -564,7 +564,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 - Guard:
   - `JwtAuthGuard` đặt global, route nào công khai thì gắn `@Public()`.
   - `RolesGuard` đi kèm decorator `@Roles()`.
-  - `OptionalJwtGuard` cho `/jobs/:slug`.
+  - `@OptionalAuth()` cho `/jobs/:slug`: có token hợp lệ thì nhận diện người xem, không có hay token sai/hết hạn thì coi như khách (không trả 401). Đọc user bằng `@ViewerUser()`.
   - Guard sở hữu `JobOwnershipGuard` và `ApplicationAccessGuard`: đọc id từ param rồi so `companyId` hoặc `candidateId`.
 - Service kiểm quyền sở hữu thêm một lần nữa (truyền `userId` vào mọi hàm), nên ngay trong backend đã có 2 lớp bảo vệ.
 - Decorator tự viết: `@CurrentUser()`, `@Lang()`, `@Roles()`, `@Public()`.

@@ -1,10 +1,21 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  UploadedFile,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiNoContentResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AuthResponse, AuthUser, Locale } from '@ltwnc/shared';
+import type { AuthResponse, AuthUser, AvatarResult, Locale } from '@ltwnc/shared';
 import { ClientInfo, type RequestClientInfo } from '../../common/decorators/client-info.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Lang } from '../../common/decorators/lang.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { IMAGE_MAX_MB, type UploadedFileLike } from '../../common/files/image-file';
+import { SingleFileUpload } from '../../common/files/single-file-upload';
 import { AuthRateLimit, LoginRateLimit } from '../../common/rate-limit/rate-limit';
 import { ApiDataResponse, ApiErrorResponses } from '../../common/swagger/api-response.decorators';
 import type { RequestUser } from '../../common/types/request-user';
@@ -12,6 +23,7 @@ import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
   AuthUserDto,
+  AvatarResultDto,
   ChangePasswordDto,
   GoogleLoginDto,
   LoginDto,
@@ -162,6 +174,27 @@ export class AuthController {
   @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED)
   updateMe(@CurrentUser() user: RequestUser, @Body() body: UpdateMeDto): Promise<AuthUser> {
     return this.authService.updateMe(user.id, body);
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @SingleFileUpload(IMAGE_MAX_MB)
+  @ApiOperation({
+    summary: 'Đổi avatar (JPG, PNG, WebP, tối đa 2 MB)',
+    description: 'Ảnh công khai trên Cloudinary, thu nhỏ còn tối đa 256 px; avatar cũ bị xóa.',
+  })
+  @ApiDataResponse(AvatarResultDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.SERVICE_UNAVAILABLE,
+  )
+  updateAvatar(
+    @CurrentUser() user: RequestUser,
+    @UploadedFile() file: UploadedFileLike | undefined,
+  ): Promise<AvatarResult> {
+    return this.authService.updateAvatar(user.id, file);
   }
 
   @Patch('me/password')

@@ -76,6 +76,19 @@ export interface PublicJobDetail extends Omit<PublicJobListItem, 'company' | 'ex
   company: PublicCompanySummary & { website: string | null };
   isAcceptingApplications: boolean;
   seo: { indexable: boolean };
+  /** Chỉ có khi người xem là ứng viên đã đăng nhập (gửi kèm token). */
+  isSaved?: boolean;
+}
+
+/** Một tin trong `GET /me/saved-jobs`. Tin đã đóng hay hết hạn vẫn hiện, kèm `isAcceptingApplications: false`. */
+export interface SavedJobItem extends PublicJobListItem {
+  savedAt: string;
+  isAcceptingApplications: boolean;
+}
+
+/** `POST /auth/me/avatar`. */
+export interface AvatarResult {
+  avatarUrl: string;
 }
 
 /** Một công ty trong danh sách công khai (`GET /companies`). */
