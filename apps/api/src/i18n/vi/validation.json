@@ -1,5 +1,8 @@
 {
   "PASSWORD_LETTER_AND_DIGIT": "Mật khẩu phải có cả chữ và số",
   "PASSWORD_SAME_AS_CURRENT": "Mật khẩu mới phải khác mật khẩu hiện tại",
-  "AT_LEAST_ONE_FIELD": "Cần gửi ít nhất một trường để cập nhật"
+  "AT_LEAST_ONE_FIELD": "Cần gửi ít nhất một trường để cập nhật",
+  "SALARY_MIN_GREATER_THAN_MAX": "Lương tối thiểu không được lớn hơn lương tối đa",
+  "SALARY_REQUIRES_PAID": "Chỉ nhập lương khi tin có trả lương",
+  "DUPLICATE_SKILL": "Mỗi kỹ năng chỉ chọn một lần"
 }

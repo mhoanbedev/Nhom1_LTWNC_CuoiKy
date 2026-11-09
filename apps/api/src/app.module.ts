@@ -26,6 +26,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CompaniesModule } from './modules/companies/companies.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -59,6 +60,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     MetaModule,
     CompaniesModule,
+    JobsModule,
     AdminModule,
   ],
   providers: [

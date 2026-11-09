@@ -62,6 +62,22 @@ export class CompaniesService {
     return company;
   }
 
+  /**
+   * Chặn tạo hay đăng tin khi công ty chưa được duyệt (mục 5.1): 403 COMPANY_NOT_APPROVED.
+   * `companyId` lấy từ user đang đăng nhập; recruiter không có công ty thì 403 FORBIDDEN.
+   */
+  async assertApproved(companyId: string | null): Promise<void> {
+    if (!companyId) throw new AppException(ErrorCode.FORBIDDEN);
+    const company = await this.companies.findOne({
+      where: { id: companyId },
+      select: { id: true, status: true },
+    });
+    if (!company) throw new AppException(ErrorCode.FORBIDDEN);
+    if (company.status !== CompanyStatus.APPROVED) {
+      throw new AppException(ErrorCode.COMPANY_NOT_APPROVED);
+    }
+  }
+
   async getForOwner(ownerId: string): Promise<RecruiterCompany> {
     return toRecruiterCompany(await this.findOwned(ownerId, this.dataSource.manager));
   }

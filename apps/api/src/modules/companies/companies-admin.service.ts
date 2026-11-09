@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   CompanyStatus,
   ErrorCode,
-  normalizeSearchText,
   type AdminCompaniesQuery,
   type AdminCompany,
   type Paginated,
@@ -11,6 +10,7 @@ import {
 import { Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
+import { containsPattern } from '../../common/utils/search';
 import { toAdminCompany } from './company.mapper';
 import { Company } from './entities/company.entity';
 
@@ -32,7 +32,7 @@ export class CompaniesAdminService {
       builder.andWhere(
         `EXISTS (SELECT 1 FROM company_translations ct
           WHERE ct.company_id = company.id AND ct.search_text LIKE :q)`,
-        { q: `%${escapeLike(normalizeSearchText(query.q))}%` },
+        { q: containsPattern(query.q) },
       );
     }
     const { skip, take } = toSkipTake(query);
@@ -75,9 +75,4 @@ export class CompaniesAdminService {
     if (!company) throw new AppException(ErrorCode.NOT_FOUND);
     return company;
   }
-}
-
-/** Ký tự đặc biệt của LIKE (%, _, \) trong từ khóa người dùng gõ được tìm đúng nghĩa đen. */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
