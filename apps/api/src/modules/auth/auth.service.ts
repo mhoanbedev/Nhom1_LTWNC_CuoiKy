@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { InjectDataSource } from '@nestjs/typeorm';
 import {
   ErrorCode,
   OAuthProvider,
@@ -11,11 +12,14 @@ import {
   type Locale,
   type LoginInput,
   type RegisterCandidateInput,
+  type RegisterRecruiterInput,
   type UpdateMeInput,
 } from '@ltwnc/shared';
+import { DataSource } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { jwtConfig } from '../../config/jwt.config';
 import type { User } from '../users/entities/user.entity';
+import { CompaniesService } from '../companies/companies.service';
 import { toAuthUser } from '../users/user.mapper';
 import { UsersService } from '../users/users.service';
 import { AccountsService } from './accounts.service';
@@ -37,6 +41,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly accountsService: AccountsService,
     private readonly googleVerifier: GoogleIdTokenVerifier,
+    private readonly companiesService: CompaniesService,
+    @InjectDataSource() private readonly dataSource: DataSource,
     @Inject(jwtConfig.KEY) private readonly config: ConfigType<typeof jwtConfig>,
   ) {}
 
@@ -54,6 +60,37 @@ export class AuthService {
       name: input.name,
       passwordHash: await this.passwordService.hash(input.password),
       preferredLocale: locale,
+    });
+    return this.startSession(user, client);
+  }
+
+  /**
+   * Đăng ký nhà tuyển dụng kèm công ty (PENDING, chờ admin duyệt) rồi đăng nhập luôn.
+   * User và công ty tạo trong một transaction: lỗi giữa chừng (vd industryId không tồn tại)
+   * thì không để lại tài khoản thiếu công ty.
+   */
+  async registerRecruiter(
+    input: RegisterRecruiterInput,
+    locale: Locale,
+    client: ClientInfo,
+  ): Promise<AuthResponse> {
+    if (await this.usersService.existsByEmail(input.email)) {
+      throw new AppException(ErrorCode.AUTH_EMAIL_TAKEN);
+    }
+    const passwordHash = await this.passwordService.hash(input.password);
+    const user = await this.dataSource.transaction(async (manager) => {
+      const created = await this.usersService.createRecruiter(
+        { email: input.email, name: input.name, passwordHash, preferredLocale: locale },
+        manager,
+      );
+      const company = await this.companiesService.createForOwner(
+        created.id,
+        input.company,
+        manager,
+      );
+      await this.usersService.setCompany(created.id, company.id, manager);
+      created.companyId = company.id;
+      return created;
     });
     return this.startSession(user, client);
   }

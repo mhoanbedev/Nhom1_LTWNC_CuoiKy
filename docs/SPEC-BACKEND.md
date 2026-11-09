@@ -130,7 +130,7 @@ Mô hình gồm 21 entity TypeORM, cùng kế thừa lớp trừu tượng AppBa
 | --- | --- | --- |
 | **User** | email (unique), passwordHash (null nếu chỉ đăng nhập Google), passwordChangedAt, name, role, status, preferredLocale, avatarUrl, companyId | companyId chỉ có với recruiter |
 | **Account** | userId, provider, providerAccountId | Liên kết OAuth, unique (provider, providerAccountId) |
-| **Company** | ownerId, status, rejectReason, logoUrl, logoPublicId, website, size, industryId, locationId, address, approvedAt |  |
+| **Company** | ownerId, status, rejectReason, logoUrl, logoPublicId, website, size, industryId, locationId, address, approvedAt | Unique (ownerId): mỗi recruiter một công ty. `size` là `1-10`, `11-50`, `51-200`, `201-500`, `500+` |
 | **CompanyTranslation** | companyId, locale, name, slug, description, searchText | Unique (companyId, locale) và (locale, slug) |
 | **Job** | shortId, companyId, status, isHidden, hiddenReason, workMode, isPaid, salaryMin, salaryMax, currency, locationId, address, quantity, expiresAt, publishedAt, closedAt | Index (status, isHidden, expiresAt), (companyId) |
 | **JobTranslation** | jobId, locale, title, slug, description, requirements, benefits, searchText | Nội dung dạng Markdown; index trigram trên searchText, viết bằng SQL trong migration vì decorator của TypeORM không khai báo được |

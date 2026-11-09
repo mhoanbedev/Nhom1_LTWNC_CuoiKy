@@ -17,6 +17,7 @@ import {
   LoginDto,
   RefreshTokenDto,
   RegisterCandidateDto,
+  RegisterRecruiterDto,
   UpdateMeDto,
 } from './dto/auth.dto';
 
@@ -37,6 +38,24 @@ export class AuthController {
     @ClientInfo() client: RequestClientInfo,
   ): Promise<AuthResponse> {
     return this.authService.registerCandidate(body, lang, client);
+  }
+
+  @Public()
+  @AuthRateLimit()
+  @Post('register/recruiter')
+  @ApiOperation({
+    summary: 'Đăng ký nhà tuyển dụng kèm công ty, trả token như đăng nhập',
+    description:
+      'Công ty ở trạng thái PENDING: đăng nhập và sửa công ty được, nhưng chưa đăng tin được cho tới khi admin duyệt. Bản vi bắt buộc, en tùy chọn.',
+  })
+  @ApiDataResponse(AuthResponseDto, { status: HttpStatus.CREATED })
+  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT, HttpStatus.TOO_MANY_REQUESTS)
+  registerRecruiter(
+    @Body() body: RegisterRecruiterDto,
+    @Lang() lang: Locale,
+    @ClientInfo() client: RequestClientInfo,
+  ): Promise<AuthResponse> {
+    return this.authService.registerRecruiter(body, lang, client);
   }
 
   @Public()

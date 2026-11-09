@@ -1,9 +1,12 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
+import { getDataSourceToken } from '@nestjs/typeorm';
 import { ErrorCode, Role, UserStatus } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { jwtConfig } from '../../config/jwt.config';
 import type { User } from '../users/entities/user.entity';
+import { CompaniesService } from '../companies/companies.service';
+import type { Company } from '../companies/entities/company.entity';
 import { UsersService } from '../users/users.service';
 import { AccountsService } from './accounts.service';
 import { AuthService } from './auth.service';
@@ -55,6 +58,8 @@ describe('AuthService', () => {
     findById: jest.fn<Promise<User | null>, [string]>(),
     findByIdWithPassword: jest.fn<Promise<User | null>, [string]>(),
     findByEmail: jest.fn<Promise<User | null>, [string]>(),
+    createRecruiter: jest.fn<Promise<User>, [unknown, unknown]>(),
+    setCompany: jest.fn<Promise<void>, [string, string, unknown]>(),
     updateProfile: jest.fn<Promise<User>, [string, object]>(),
     setPassword: jest.fn<Promise<User>, [string, string]>(),
   };
@@ -75,10 +80,19 @@ describe('AuthService', () => {
     link: jest.fn<Promise<void>, [string, string, string]>(),
   };
   const googleVerifier = { verify: jest.fn<Promise<GoogleIdentity>, [string]>() };
+  const companiesService = {
+    createForOwner: jest.fn<Promise<Company>, [string, unknown, unknown]>(),
+  };
+  /** Transaction giả: chạy callback với một manager giả, lỗi trong callback được ném tiếp. */
+  const manager = { fake: 'manager' };
+  const dataSource = {
+    transaction: jest.fn((run: (m: typeof manager) => Promise<unknown>) => run(manager)),
+  };
   let service: AuthService;
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    dataSource.transaction.mockImplementation((run) => run(manager));
     jwtService.signAsync.mockResolvedValue('signed.jwt.token');
     refreshTokenService.issueForNewSession.mockResolvedValue(issued);
     const moduleRef = await Test.createTestingModule({
@@ -90,10 +104,66 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: AccountsService, useValue: accountsService },
         { provide: GoogleIdTokenVerifier, useValue: googleVerifier },
+        { provide: CompaniesService, useValue: companiesService },
+        { provide: getDataSourceToken(), useValue: dataSource },
         { provide: jwtConfig.KEY, useValue: { accessSecret: 'x', accessTtlSeconds: 900 } },
       ],
     }).compile();
     service = moduleRef.get(AuthService);
+  });
+
+  describe('registerRecruiter', () => {
+    const input = {
+      email: 'hr@example.com',
+      password: 'abc12345',
+      name: 'Chị HR',
+      company: { translations: { vi: { name: 'Công ty ABC' } } },
+    };
+
+    it('tạo nhà tuyển dụng và công ty trong cùng transaction, gắn companyId, trả token', async () => {
+      usersService.existsByEmail.mockResolvedValue(false);
+      passwordService.hash.mockResolvedValue('argon-hash');
+      usersService.createRecruiter.mockResolvedValue(
+        makeUser({ id: 'hr-1', role: Role.RECRUITER, email: 'hr@example.com' }),
+      );
+      companiesService.createForOwner.mockResolvedValue({ id: 'company-1' } as Company);
+
+      const result = await service.registerRecruiter(input, 'vi', client);
+
+      expect(usersService.createRecruiter).toHaveBeenCalledWith(
+        {
+          email: 'hr@example.com',
+          name: 'Chị HR',
+          passwordHash: 'argon-hash',
+          preferredLocale: 'vi',
+        },
+        manager,
+      );
+      expect(companiesService.createForOwner).toHaveBeenCalledWith('hr-1', input.company, manager);
+      expect(usersService.setCompany).toHaveBeenCalledWith('hr-1', 'company-1', manager);
+      expect(result.user).toMatchObject({
+        id: 'hr-1',
+        role: Role.RECRUITER,
+        companyId: 'company-1',
+      });
+    });
+
+    it('tạo công ty lỗi thì lỗi được ném ra và không cấp phiên', async () => {
+      usersService.existsByEmail.mockResolvedValue(false);
+      usersService.createRecruiter.mockResolvedValue(makeUser({ id: 'hr-1' }));
+      companiesService.createForOwner.mockRejectedValue(new Error('FK industry'));
+      await expect(service.registerRecruiter(input, 'vi', client)).rejects.toThrow('FK industry');
+      expect(refreshTokenService.issueForNewSession).not.toHaveBeenCalled();
+    });
+
+    it('email đã dùng trả AUTH_EMAIL_TAKEN, không mở transaction', async () => {
+      usersService.existsByEmail.mockResolvedValue(true);
+      await expectAppError(
+        service.registerRecruiter(input, 'vi', client),
+        ErrorCode.AUTH_EMAIL_TAKEN,
+      );
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('registerCandidate', () => {
