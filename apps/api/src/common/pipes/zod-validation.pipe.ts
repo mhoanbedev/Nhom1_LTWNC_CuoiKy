@@ -1,25 +1,15 @@
-import { ErrorCode, type ApiErrorDetail } from '@ltwnc/shared';
+import { ErrorCode } from '@ltwnc/shared';
 import { createZodValidationPipe } from 'nestjs-zod';
 import { ZodError } from 'zod';
-import { AppException } from '../exceptions/app.exception';
-
-/** Đổi lỗi Zod thành danh sách `{ field, message }`, field dạng `education.0.school`. */
-export function zodErrorToDetails(error: ZodError): ApiErrorDetail[] {
-  return error.issues.map((issue) => ({
-    field: issue.path.map(String).join('.') || '(body)',
-    message: issue.message,
-  }));
-}
+import { AppException, ValidationFailedException } from '../exceptions/app.exception';
 
 /**
  * Pipe validate global: mọi body, query, param có DTO tạo từ schema Zod (createZodDto).
- * Sai thì ném AppException VALIDATION_FAILED kèm details, đi chung đường với mọi lỗi khác.
+ * Sai thì ném ValidationFailedException (400 VALIDATION_FAILED); filter dịch details theo ngôn ngữ.
  */
 export const AppZodValidationPipe = createZodValidationPipe({
   createValidationException: (error: unknown) =>
-    new AppException(
-      ErrorCode.VALIDATION_FAILED,
-      undefined,
-      error instanceof ZodError ? zodErrorToDetails(error) : undefined,
-    ),
+    error instanceof ZodError
+      ? new ValidationFailedException(error)
+      : new AppException(ErrorCode.VALIDATION_FAILED),
 });

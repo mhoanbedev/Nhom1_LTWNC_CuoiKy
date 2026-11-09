@@ -1,8 +1,21 @@
 import { ArgumentsHost, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
-import { ErrorCode, type ApiError } from '@ltwnc/shared';
+import { ErrorCode, type ApiError, type Locale } from '@ltwnc/shared';
+import type { I18nService } from 'nestjs-i18n';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
-import { AppException } from '../exceptions/app.exception';
+import { z } from 'zod';
+import en from '../../i18n/en/errors.json';
+import vi from '../../i18n/vi/errors.json';
+import { AppException, ValidationFailedException } from '../exceptions/app.exception';
 import { AllExceptionsFilter, resolveError } from './all-exceptions.filter';
+
+/** I18nService giả: đọc thẳng file dịch và điền {tham số}, đủ để kiểm tra filter. */
+const fakeI18n = {
+  t: (key: string, options?: { lang?: string; args?: Record<string, string | number> }) => {
+    const files: Record<string, Record<string, string>> = { vi, en };
+    const template = files[options?.lang ?? 'vi']?.[key.replace('errors.', '')] ?? key;
+    return template.replace(/\{(\w+)\}/g, (m, k: string) => String(options?.args?.[k] ?? m));
+  },
+} as unknown as I18nService;
 
 const queryFailed = (pgCode: string): QueryFailedError<Error> =>
   new QueryFailedError<Error>('INSERT ...', [], Object.assign(new Error('pg'), { code: pgCode }));
@@ -66,14 +79,14 @@ describe('resolveError', () => {
 });
 
 describe('AllExceptionsFilter', () => {
-  const filter = new AllExceptionsFilter();
+  const filter = new AllExceptionsFilter(fakeI18n);
 
-  function run(exception: unknown): { status: number; body: ApiError } {
+  function run(exception: unknown, locale?: Locale): { status: number; body: ApiError } {
     const json = jest.fn<void, [ApiError]>();
     const status = jest.fn<{ json: typeof json }, [number]>().mockReturnValue({ json });
     const host = {
       switchToHttp: () => ({
-        getRequest: () => ({ url: '/api/v1/x', method: 'GET', requestId: 'req-1' }),
+        getRequest: () => ({ url: '/api/v1/x', method: 'GET', requestId: 'req-1', locale }),
         getResponse: () => ({ status }),
       }),
     } as unknown as ArgumentsHost;
@@ -97,6 +110,20 @@ describe('AllExceptionsFilter', () => {
       requestId: 'req-1',
     });
     expect(new Date(body.timestamp).toString()).not.toBe('Invalid Date');
+  });
+
+  it('dịch câu báo theo ngôn ngữ của request', () => {
+    const { body } = run(new AppException(ErrorCode.CV_LIMIT_REACHED, { max: 5 }), 'en');
+    expect(body.message).toBe('You already have the maximum of 5 CVs');
+  });
+
+  it('lỗi validate trả details từng trường', () => {
+    const parsed = z.object({ email: z.email() }).safeParse({ email: 'x' });
+    if (parsed.success) throw new Error('Mong đợi lỗi validate');
+    const { status, body } = run(new ValidationFailedException(parsed.error), 'en');
+    expect(status).toBe(400);
+    expect(body.code).toBe('VALIDATION_FAILED');
+    expect(body.details).toEqual([{ field: 'email', message: expect.any(String) as string }]);
   });
 
   it('lỗi 500 không lộ chi tiết lỗi gốc', () => {

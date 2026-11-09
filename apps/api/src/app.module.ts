@@ -1,9 +1,13 @@
+import { join } from 'node:path';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { DEFAULT_LOCALE } from '@ltwnc/shared';
+import { I18nModule } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { localeMiddleware } from './common/middleware/locale.middleware';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { appConfig } from './config/app.config';
@@ -21,6 +25,13 @@ import { DatabaseModule } from './database/database.module';
       validate: validateEnv,
       load: [appConfig, databaseConfig],
     }),
+    I18nModule.forRoot({
+      fallbackLanguage: DEFAULT_LOCALE,
+      // src/i18n khi chạy test (ts-jest), dist/i18n khi chạy bản build (nest-cli copy sang).
+      loaderOptions: { path: join(__dirname, 'i18n'), watch: false },
+      // Ngôn ngữ do localeMiddleware chọn và truyền tường minh khi dịch, nên không cần resolver.
+      resolvers: [],
+    }),
     DatabaseModule,
   ],
   providers: [
@@ -33,6 +44,6 @@ import { DatabaseModule } from './database/database.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(requestIdMiddleware).forRoutes('*path');
+    consumer.apply(requestIdMiddleware, localeMiddleware).forRoutes('*path');
   }
 }

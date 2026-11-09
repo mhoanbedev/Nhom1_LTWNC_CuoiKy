@@ -4,14 +4,20 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Injectable,
   Logger,
 } from '@nestjs/common';
-import { ErrorCode, type ApiError, type ApiErrorDetail } from '@ltwnc/shared';
+import { DEFAULT_LOCALE, ErrorCode, type ApiError, type ApiErrorDetail } from '@ltwnc/shared';
 import type { Request, Response } from 'express';
+import { I18nService } from 'nestjs-i18n';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
-import { AppException } from '../exceptions/app.exception';
+import {
+  AppException,
+  ValidationFailedException,
+  type ErrorParams,
+} from '../exceptions/app.exception';
 import { ERROR_HTTP_STATUS } from '../exceptions/error-http-status';
-import { errorMessage, type ErrorParams } from '../exceptions/error-messages';
+import { zodIssuesToDetails } from '../i18n/zod-issues';
 
 interface ResolvedError {
   code: ErrorCode;
@@ -78,17 +84,21 @@ export function resolveError(exception: unknown): ResolvedError {
 }
 
 /**
- * Exception Filter duy nhất: mọi lỗi trả cùng một format ApiError,
- * lỗi 500 ghi log kèm stack nhưng không bao giờ lộ stack ra response.
+ * Exception Filter duy nhất: mọi lỗi trả cùng một format ApiError, `message` và `details`
+ * dịch theo ngôn ngữ của request; lỗi 500 ghi log kèm stack nhưng không lộ stack ra response.
  */
 @Catch()
+@Injectable()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  constructor(private readonly i18n: I18nService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
+    const locale = request.locale ?? DEFAULT_LOCALE;
     const { code, status, params, details } = resolveError(exception);
 
     if (status >= 500) {
@@ -96,11 +106,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(`[${request.requestId}] ${request.method} ${request.url}`, stack);
     }
 
+    const localizedDetails =
+      exception instanceof ValidationFailedException
+        ? zodIssuesToDetails(exception.zodError, locale)
+        : details;
+
     const body: ApiError = {
       statusCode: status,
       code,
-      message: errorMessage(code, params),
-      details: details && details.length > 0 ? details : null,
+      message: this.i18n.t(`errors.${code}`, { lang: locale, args: params }),
+      details: localizedDetails && localizedDetails.length > 0 ? localizedDetails : null,
       path: request.url,
       timestamp: new Date().toISOString(),
       requestId: request.requestId ?? '',

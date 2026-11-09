@@ -1,11 +1,12 @@
 import { Body, Controller, Get, INestApplication, Post } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ErrorCode, type ApiError, type Paginated } from '@ltwnc/shared';
+import { ErrorCode, type ApiError, type Locale, type Paginated } from '@ltwnc/shared';
 import { createZodDto } from 'nestjs-zod';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { z } from 'zod';
 import { AppModule } from '../src/app.module';
+import { Lang } from '../src/common/decorators/lang.decorator';
 import { AppException } from '../src/common/exceptions/app.exception';
 
 class CreateThingDto extends createZodDto(
@@ -38,6 +39,11 @@ class TestController {
   @Post('things')
   create(@Body() body: CreateThingDto): CreateThingDto {
     return body;
+  }
+
+  @Get('lang')
+  lang(@Lang() lang: Locale): { lang: Locale } {
+    return { lang };
   }
 }
 
@@ -117,5 +123,43 @@ describe('Lớp dùng chung (e2e)', () => {
     const res = await http().get('/api/v1/__test/crash').expect(500);
     expect((res.body as ApiError).code).toBe('INTERNAL_ERROR');
     expect(JSON.stringify(res.body)).not.toContain('không được lộ');
+  });
+
+  describe('Song ngữ', () => {
+    it('mặc định trả câu báo tiếng Việt', async () => {
+      const res = await http().get('/api/v1/khong-ton-tai').expect(404);
+      expect((res.body as ApiError).message).toBe('Không tìm thấy dữ liệu');
+    });
+
+    it('?lang=en trả câu báo tiếng Anh, code giữ nguyên', async () => {
+      const res = await http().get('/api/v1/__test/app-error?lang=en').expect(403);
+      expect(res.body).toMatchObject({
+        code: 'COMPANY_NOT_APPROVED',
+        message: 'Your company has not been approved yet',
+      });
+    });
+
+    it('Accept-Language: en cũng chọn tiếng Anh', async () => {
+      const res = await http()
+        .get('/api/v1/khong-ton-tai')
+        .set('Accept-Language', 'en-US,en;q=0.9')
+        .expect(404);
+      expect((res.body as ApiError).message).toBe('Not found');
+    });
+
+    it('lỗi validate dịch cả details theo ngôn ngữ', async () => {
+      const send = (lang: Locale) =>
+        http().post(`/api/v1/__test/things?lang=${lang}`).send({ name: 'a', age: 20 }).expect(400);
+      const vi = (await send('vi')).body as ApiError;
+      const en = (await send('en')).body as ApiError;
+      expect(en.message).toBe('The submitted data is invalid');
+      expect(vi.details?.[0]?.field).toBe('name');
+      expect(vi.details?.[0]?.message).not.toBe(en.details?.[0]?.message);
+    });
+
+    it('@Lang() trả ngôn ngữ đã chuẩn hoá', async () => {
+      const res = await http().get('/api/v1/__test/lang?lang=EN').expect(200);
+      expect(res.body).toEqual({ data: { lang: 'en' } });
+    });
   });
 });
