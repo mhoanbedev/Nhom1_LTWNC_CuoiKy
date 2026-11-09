@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { ApplicationTransitionService } from './application-transition.service';
 import { ApplicationsService } from './applications.service';
 import { CandidateApplicationsController } from './candidate-applications.controller';
+import { ApplicationNote } from './entities/application-note.entity';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import { Application } from './entities/application.entity';
 import { RecruiterApplicationsController } from './recruiter-applications.controller';
@@ -14,7 +15,7 @@ import { RecruiterApplicationsService } from './recruiter-applications.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Application, ApplicationStatusHistory, Job]),
+    TypeOrmModule.forFeature([Application, ApplicationStatusHistory, ApplicationNote, Job]),
     ProfilesModule,
     CvsModule,
     UsersModule,

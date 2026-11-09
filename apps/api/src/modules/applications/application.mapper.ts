@@ -4,6 +4,7 @@ import type {
   CandidateApplication,
   CandidateApplicationListItem,
   Locale,
+  ApplicationNote as ApplicationNoteDto,
   RecruiterApplication,
   RecruiterApplicationListItem,
 } from '@ltwnc/shared';
@@ -11,6 +12,7 @@ import { ApplicationActor, ErrorCode, nextStatuses } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { companySummary, pickTranslation } from '../jobs/public-job.mapper';
 import type { Job } from '../jobs/entities/job.entity';
+import type { ApplicationNote } from './entities/application-note.entity';
 import type { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import type { Application } from './entities/application.entity';
 
@@ -102,5 +104,18 @@ export function toRecruiterApplication(
     snapshotTakenAt: application.profileSnapshot.takenAt,
     history: toHistory(application.history, application.candidateId),
     allowedTransitions: [...nextStatuses(application.status, ApplicationActor.RECRUITER)],
+    notes: toNotes(application.notes),
   };
+}
+
+/** Ghi chú (kèm author) → mới nhất lên trước. */
+export function toNotes(rows: ApplicationNote[] | undefined): ApplicationNoteDto[] {
+  return [...(rows ?? [])]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map((row) => ({
+      id: row.id,
+      content: row.content,
+      author: row.author ? { id: row.author.id, name: row.author.name } : null,
+      createdAt: row.createdAt.toISOString(),
+    }));
 }

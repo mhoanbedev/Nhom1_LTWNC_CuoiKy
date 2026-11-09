@@ -68,4 +68,15 @@ export interface RecruiterApplication extends RecruiterApplicationListItem {
   history: ApplicationHistoryItem[];
   /** Trạng thái nhà tuyển dụng được chuyển tới (để hiện nút); rỗng khi đơn đã kết thúc. */
   allowedTransitions: ApplicationStatus[];
+  /** Ghi chú nội bộ, mới nhất lên trước. Chỉ nhà tuyển dụng thấy. */
+  notes: ApplicationNote[];
+}
+
+/** Ghi chú nội bộ của nhà tuyển dụng về một đơn; chỉ thêm, không sửa, không xóa. */
+export interface ApplicationNote {
+  id: string;
+  content: string;
+  /** null khi tài khoản người viết đã bị xóa. */
+  author: { id: string; name: string } | null;
+  createdAt: string;
 }

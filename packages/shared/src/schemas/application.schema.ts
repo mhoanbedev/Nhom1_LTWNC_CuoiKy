@@ -42,3 +42,11 @@ export type ChangeApplicationStatusInput = z.infer<typeof changeApplicationStatu
 /** `GET /recruiter/jobs/:id/applications`: lọc theo trạng thái, phân trang. */
 export const recruiterApplicationsQuerySchema = myApplicationsQuerySchema;
 export type RecruiterApplicationsQuery = z.infer<typeof recruiterApplicationsQuerySchema>;
+
+export const APPLICATION_NOTE_MAX = 2000;
+
+/** `POST /recruiter/applications/:id/notes`: ghi chú nội bộ, ứng viên không bao giờ thấy. */
+export const createApplicationNoteSchema = z.object({
+  content: z.string().trim().min(1).max(APPLICATION_NOTE_MAX),
+});
+export type CreateApplicationNoteInput = z.infer<typeof createApplicationNoteSchema>;

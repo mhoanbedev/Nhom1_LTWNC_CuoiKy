@@ -6,12 +6,14 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   LOCALES,
   Role,
+  type ApplicationNote,
   type Locale,
   type Paginated,
   type RecruiterApplication,
@@ -27,7 +29,9 @@ import {
 } from '../../common/swagger/api-response.decorators';
 import type { RequestUser } from '../../common/types/request-user';
 import {
+  ApplicationNoteDto,
   ChangeApplicationStatusDto,
+  CreateApplicationNoteDto,
   RecruiterApplicationDto,
   RecruiterApplicationListItemDto,
   RecruiterApplicationsQueryDto,
@@ -61,7 +65,8 @@ export class RecruiterApplicationsController {
   @Get('applications/:id')
   @ApiQuery({ name: 'lang', enum: LOCALES, required: false })
   @ApiOperation({
-    summary: 'Chi tiết đơn: ảnh chụp hồ sơ, CV, lịch sử, trạng thái được chuyển tới',
+    summary:
+      'Chi tiết đơn: ảnh chụp hồ sơ, CV, lịch sử, ghi chú nội bộ, trạng thái được chuyển tới',
     description: 'Đơn vào tin của công ty khác trả 404. Tải CV qua GET /files/cvs/:cvId.',
   })
   @ApiDataResponse(RecruiterApplicationDto)
@@ -72,6 +77,35 @@ export class RecruiterApplicationsController {
     @Lang() lang: Locale,
   ): Promise<RecruiterApplication> {
     return this.service.get(user.companyId, id, lang);
+  }
+
+  @Get('applications/:id/notes')
+  @ApiOperation({
+    summary: 'Ghi chú nội bộ của đơn, mới nhất lên trước',
+    description: 'Chỉ nhà tuyển dụng công ty sở hữu tin thấy; ứng viên không bao giờ thấy.',
+  })
+  @ApiDataResponse(ApplicationNoteDto, { isArray: true })
+  @ApiErrorResponses(...OWNED_ERRORS)
+  listNotes(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ApplicationNote[]> {
+    return this.service.listNotes(user.companyId, id);
+  }
+
+  @Post('applications/:id/notes')
+  @ApiOperation({
+    summary: 'Thêm ghi chú nội bộ (tối đa 2000 ký tự)',
+    description: 'Chỉ thêm, không sửa, không xóa. Trả cả danh sách ghi chú sau khi thêm.',
+  })
+  @ApiDataResponse(ApplicationNoteDto, { status: HttpStatus.CREATED, isArray: true })
+  @ApiErrorResponses(HttpStatus.BAD_REQUEST, ...OWNED_ERRORS)
+  addNote(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CreateApplicationNoteDto,
+  ): Promise<ApplicationNote[]> {
+    return this.service.addNote(user.id, user.companyId, id, body);
   }
 
   @Patch('applications/:id/status')

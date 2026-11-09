@@ -2,6 +2,7 @@ import {
   applySchema,
   ApplicationStatus,
   changeApplicationStatusSchema,
+  createApplicationNoteSchema,
   LOCALES,
   myApplicationsQuerySchema,
   recruiterApplicationsQuerySchema,
@@ -11,6 +12,7 @@ import { z } from 'zod';
 
 export class ApplyDto extends createZodDto(applySchema) {}
 export class MyApplicationsQueryDto extends createZodDto(myApplicationsQuerySchema) {}
+export class CreateApplicationNoteDto extends createZodDto(createApplicationNoteSchema) {}
 export class ChangeApplicationStatusDto extends createZodDto(changeApplicationStatusSchema) {}
 export class RecruiterApplicationsQueryDto extends createZodDto(recruiterApplicationsQuerySchema) {}
 
@@ -57,6 +59,15 @@ export class CandidateApplicationDto extends createZodDto(
   }),
 ) {}
 
+const note = z.object({
+  id: z.uuid(),
+  content: z.string(),
+  author: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+  createdAt: z.iso.datetime(),
+});
+
+export class ApplicationNoteDto extends createZodDto(note) {}
+
 const recruiterListItem = z.object({
   id: z.uuid(),
   status,
@@ -83,5 +94,6 @@ export class RecruiterApplicationDto extends createZodDto(
     snapshotTakenAt: z.iso.datetime(),
     history,
     allowedTransitions: z.array(status),
+    notes: z.array(note).meta({ description: 'Ghi chú nội bộ, mới nhất lên trước' }),
   }),
 ) {}

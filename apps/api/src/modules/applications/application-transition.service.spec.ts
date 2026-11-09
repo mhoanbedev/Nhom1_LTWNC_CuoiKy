@@ -4,6 +4,7 @@ import { ApplicationActor, ApplicationStatus, ErrorCode } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { Job } from '../jobs/entities/job.entity';
 import { ApplicationTransitionService } from './application-transition.service';
+import { ApplicationNote } from './entities/application-note.entity';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import { Application } from './entities/application.entity';
 import { RecruiterApplicationsService } from './recruiter-applications.service';
@@ -37,6 +38,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
         { provide: getDataSourceToken(), useValue: dataSource },
         { provide: getRepositoryToken(Application), useValue: applications },
         { provide: getRepositoryToken(Job), useValue: {} },
+        { provide: getRepositoryToken(ApplicationNote), useValue: {} },
       ],
     }).compile();
     transitions = moduleRef.get(ApplicationTransitionService);

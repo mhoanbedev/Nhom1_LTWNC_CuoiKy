@@ -4,6 +4,7 @@ import { AppBaseEntity } from '../../../common/entities/app-base.entity';
 import { CvFile } from '../../cvs/entities/cv-file.entity';
 import { Job } from '../../jobs/entities/job.entity';
 import { User } from '../../users/entities/user.entity';
+import { ApplicationNote } from './application-note.entity';
 import { ApplicationStatusHistory } from './application-status-history.entity';
 
 /**
@@ -58,4 +59,7 @@ export class Application extends AppBaseEntity {
 
   @OneToMany(() => ApplicationStatusHistory, (row) => row.application)
   history?: ApplicationStatusHistory[];
+
+  @OneToMany(() => ApplicationNote, (row) => row.application)
+  notes?: ApplicationNote[];
 }

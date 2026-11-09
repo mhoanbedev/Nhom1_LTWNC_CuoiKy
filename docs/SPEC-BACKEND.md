@@ -380,7 +380,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | GET | /recruiter/jobs/:id/applications | Recruiter công ty sở hữu | Lọc theo `status`, phân trang |
 | GET | /recruiter/applications/:id | Recruiter công ty sở hữu | Snapshot hồ sơ, CV, lịch sử, ghi chú |
 | PATCH | /recruiter/applications/:id/status | Recruiter công ty sở hữu | Body `{ to, note? }`, theo bảng 5.4 |
-| GET, POST | /recruiter/applications/:id/notes | Recruiter công ty sở hữu |  |
+| GET, POST | /recruiter/applications/:id/notes | Recruiter công ty sở hữu | Ghi chú nội bộ (tối đa 2000 ký tự), chỉ thêm, không sửa, không xóa; trả hết, mới nhất lên trước. Ứng viên không bao giờ thấy |
 | PATCH, DELETE | /recruiter/notes/:noteId | Tác giả ghi chú |  |
 | GET | /recruiter/stats | Recruiter |  |
 

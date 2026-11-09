@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   ApplicationActor,
   ErrorCode,
+  type ApplicationNote as ApplicationNoteDto,
   type ChangeApplicationStatusInput,
+  type CreateApplicationNoteInput,
   type Locale,
   type Paginated,
   type RecruiterApplication,
@@ -15,7 +17,12 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { Job } from '../jobs/entities/job.entity';
 import { ApplicationTransitionService } from './application-transition.service';
-import { toRecruiterApplication, toRecruiterApplicationListItem } from './application.mapper';
+import {
+  toNotes,
+  toRecruiterApplication,
+  toRecruiterApplicationListItem,
+} from './application.mapper';
+import { ApplicationNote } from './entities/application-note.entity';
 import { Application } from './entities/application.entity';
 
 /**
@@ -28,6 +35,7 @@ export class RecruiterApplicationsService {
   constructor(
     @InjectRepository(Application) private readonly applications: Repository<Application>,
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
+    @InjectRepository(ApplicationNote) private readonly notes: Repository<ApplicationNote>,
     private readonly transitions: ApplicationTransitionService,
   ) {}
 
@@ -73,6 +81,37 @@ export class RecruiterApplicationsService {
     return this.get(companyId, id, lang);
   }
 
+  /** Ghi chú nội bộ của đơn, mới nhất lên trước. */
+  async listNotes(companyId: string | null, id: string): Promise<ApplicationNoteDto[]> {
+    await this.assertOwned(companyId, id);
+    const rows = await this.notes.find({
+      where: { applicationId: id },
+      relations: { author: true },
+    });
+    return toNotes(rows);
+  }
+
+  /** Thêm ghi chú nội bộ (chỉ thêm, không sửa, không xóa); trả cả danh sách sau khi thêm. */
+  async addNote(
+    recruiterId: string,
+    companyId: string | null,
+    id: string,
+    input: CreateApplicationNoteInput,
+  ): Promise<ApplicationNoteDto[]> {
+    await this.assertOwned(companyId, id);
+    await this.notes.insert({ applicationId: id, authorId: recruiterId, content: input.content });
+    return this.listNotes(companyId, id);
+  }
+
+  /** Đơn vào tin của công ty mình; không thì 404. Nhẹ hơn findOwned khi không cần dữ liệu đơn. */
+  private async assertOwned(companyId: string | null, id: string): Promise<void> {
+    const owned = await this.applications.existsBy({
+      id,
+      job: { companyId: requireCompany(companyId) },
+    });
+    if (!owned) throw new AppException(ErrorCode.NOT_FOUND);
+  }
+
   private async findOwned(companyId: string | null, id: string): Promise<Application> {
     const application = await this.applications.findOne({
       where: { id, job: { companyId: requireCompany(companyId) } },
@@ -80,6 +119,7 @@ export class RecruiterApplicationsService {
         job: { translations: true, company: { translations: true } },
         cvFile: true,
         history: true,
+        notes: { author: true },
       },
     });
     if (!application) throw new AppException(ErrorCode.NOT_FOUND);
