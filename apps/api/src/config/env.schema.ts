@@ -21,6 +21,9 @@ export const envSchema = z.object({
   REFRESH_TOKEN_GRACE_SECONDS: z.coerce.number().int().min(0).max(300).default(30),
   RATE_LIMIT_AUTH_PER_MINUTE: z.coerce.number().int().min(1).default(30),
   RATE_LIMIT_LOGIN_PER_EMAIL: z.coerce.number().int().min(1).default(10),
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, 'lấy ở Cloudinary Dashboard'),
+  CLOUDINARY_API_KEY: z.string().min(1, 'lấy ở Cloudinary Settings → API Keys'),
+  CLOUDINARY_API_SECRET: z.string().min(1, 'lấy ở Cloudinary Settings → API Keys'),
   GOOGLE_CLIENT_ID: z
     .string()
     .regex(

@@ -525,7 +525,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | PROFILE\_INCOMPLETE | 400 | Chưa xong các bước hồ sơ bắt buộc |
 | CV\_INVALID | 400 | CV không thuộc ứng viên hoặc đã xóa |
 | CV\_LIMIT\_REACHED | 400 | Đã có 5 CV |
-| FILE\_INVALID\_TYPE | 400 | Không phải PDF |
+| FILE\_INVALID\_TYPE | 400 | Sai loại file (CV không phải PDF, ảnh không phải JPG/PNG/WebP); tham số `allowed` |
 | FILE\_TOO\_LARGE | 400 | Vượt 5 MB |
 | JOB\_INVALID\_TRANSITION | 400 | Chuyển trạng thái tin sai bảng 5.2 |
 | APPLICATION\_INVALID\_TRANSITION | 400 | Chuyển trạng thái đơn sai bảng 5.4 |

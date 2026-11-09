@@ -7,6 +7,9 @@ const validEnv = {
   DATABASE_URL: 'postgresql://ltwnc:ltwnc@localhost:5435/ltwnc',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
+  CLOUDINARY_CLOUD_NAME: 'test-cloud',
+  CLOUDINARY_API_KEY: 'test-key',
+  CLOUDINARY_API_SECRET: 'test-secret',
 };
 
 describe('validateEnv', () => {

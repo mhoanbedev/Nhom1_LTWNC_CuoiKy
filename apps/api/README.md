@@ -30,6 +30,7 @@ Gõ `make` để xem đầy đủ.
 | `make migration-show` | Liệt kê migration và trạng thái đã chạy |
 | `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
 | `make migration-create name=TenMoTa` | Tạo migration rỗng để viết SQL tay |
+| `make cloudinary-check` | Thử key Cloudinary: upload một ảnh và một PDF riêng tư vào folder `dev-check/`, in link |
 | `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -70,4 +71,5 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `RATE_LIMIT_AUTH_PER_MINUTE` | Số request/phút trên một IP cho đăng ký, đăng nhập, refresh, Google; mặc định 30 |
 | `RATE_LIMIT_LOGIN_PER_EMAIL` | Số lần đăng nhập trong 15 phút cho một email (chặn dò mật khẩu); mặc định 10 |
 | `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh (công khai) và CV (riêng tư). Kiểm key bằng `make cloudinary-check` |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Chỉ `make seed` dùng: tài khoản admin duy nhất. Chạy seed lại với giá trị khác thì cập nhật chính admin đó |

@@ -7,6 +7,10 @@ const testEnv: Record<string, string> = {
   JWT_ACCESS_SECRET: 'test-only-secret-khong-dung-cho-production-0123456789',
   JWT_ACCESS_EXPIRES_IN: '15m',
   GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
+  // Giá trị giả: test không gọi Cloudinary thật (mock CloudinaryService).
+  CLOUDINARY_CLOUD_NAME: 'test-cloud',
+  CLOUDINARY_API_KEY: 'test-key',
+  CLOUDINARY_API_SECRET: 'test-secret',
   // Rất cao để các test khác không bị 429; test giới hạn tần suất tự đặt mức thấp.
   RATE_LIMIT_AUTH_PER_MINUTE: '100000',
   RATE_LIMIT_LOGIN_PER_EMAIL: '100000',
