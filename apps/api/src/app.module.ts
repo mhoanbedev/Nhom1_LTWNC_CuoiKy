@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DEFAULT_LOCALE } from '@ltwnc/shared';
 import { I18nModule } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -38,6 +39,7 @@ import { UsersModule } from './modules/users/users.module';
       // Ngôn ngữ do localeMiddleware chọn và truyền tường minh khi dịch, nên không cần resolver.
       resolvers: [],
     }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     HealthModule,
     UsersModule,

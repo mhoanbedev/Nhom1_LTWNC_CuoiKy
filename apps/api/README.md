@@ -58,3 +58,5 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `DATABASE_URL` | Chuỗi kết nối app dùng |
 | `JWT_ACCESS_SECRET` | Khóa ký access token, tối thiểu 32 ký tự; để trống thì `make env` tự sinh cho dev |
 | `JWT_ACCESS_EXPIRES_IN` | Thời hạn access token, vd `15m` |
+| `REFRESH_TOKEN_EXPIRES_IN` | Thời hạn refresh token, vd `7d` |
+| `REFRESH_TOKEN_GRACE_SECONDS` | Khoảng ân hạn khi xoay refresh token (giây), mặc định 30 |

@@ -10,6 +10,8 @@ import { AuthService } from './auth.service';
 import { Account } from './entities/account.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordService } from './password.service';
+import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task';
+import { RefreshTokenService } from './refresh-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -26,6 +28,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PasswordService, JwtStrategy],
+  providers: [
+    AuthService,
+    PasswordService,
+    RefreshTokenService,
+    RefreshTokenCleanupTask,
+    JwtStrategy,
+  ],
+  exports: [RefreshTokenService],
 })
 export class AuthModule {}

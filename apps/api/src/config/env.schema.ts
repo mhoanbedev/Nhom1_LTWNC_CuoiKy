@@ -17,6 +17,8 @@ export const envSchema = z.object({
     .regex(/^postgres(ql)?:\/\//, 'phải là chuỗi kết nối PostgreSQL (postgresql://...)'),
   JWT_ACCESS_SECRET: z.string().min(32, 'tối thiểu 32 ký tự; `make env` tự sinh khi để trống'),
   JWT_ACCESS_EXPIRES_IN: duration('15m'),
+  REFRESH_TOKEN_EXPIRES_IN: duration('7d'),
+  REFRESH_TOKEN_GRACE_SECONDS: z.coerce.number().int().min(0).max(300).default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;

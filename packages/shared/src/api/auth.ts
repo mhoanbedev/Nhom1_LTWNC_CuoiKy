@@ -13,14 +13,17 @@ export interface AuthUser {
 }
 
 /**
- * Response của /auth/register/*, /auth/login, /auth/oauth/google, /auth/refresh.
- * Mốc hết hạn dạng ISO 8601 để Auth.js biết khi nào cần refresh.
+ * Cặp token. Mốc hết hạn dạng ISO 8601 để Auth.js biết khi nào cần gọi /auth/refresh
+ * (đặc tả mục 6: refresh khi access token còn dưới 60 giây).
  */
 export interface AuthTokens {
   accessToken: string;
   accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
 }
 
+/** Response của /auth/register/*, /auth/login, /auth/oauth/google, /auth/refresh. */
 export interface AuthResponse extends AuthTokens {
   user: AuthUser;
 }

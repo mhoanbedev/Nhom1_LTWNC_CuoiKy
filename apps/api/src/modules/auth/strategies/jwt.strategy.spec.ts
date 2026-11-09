@@ -19,7 +19,12 @@ const user = (overrides: Partial<User> = {}): User =>
 describe('JwtStrategy.validate', () => {
   const findById = jest.fn<Promise<User | null>, [string]>();
   const strategy = new JwtStrategy(
-    { accessSecret: 'secret-secret-secret-secret-secret', accessTtlSeconds: 900 },
+    {
+      accessSecret: 'secret-secret-secret-secret-secret',
+      accessTtlSeconds: 900,
+      refreshTtlSeconds: 604800,
+      refreshGraceSeconds: 30,
+    },
     { findById } as unknown as UsersService,
   );
   const nowSeconds = Math.floor(Date.now() / 1000);

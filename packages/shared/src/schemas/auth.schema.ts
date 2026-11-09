@@ -35,3 +35,9 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/** Body của /auth/refresh và /auth/logout. Refresh token là chuỗi ngẫu nhiên, không phải JWT. */
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(32).max(256),
+});
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

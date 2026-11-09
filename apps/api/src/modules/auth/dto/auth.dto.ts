@@ -1,10 +1,18 @@
-import { LOCALES, loginSchema, registerCandidateSchema, USER_ROLES } from '@ltwnc/shared';
+import {
+  LOCALES,
+  loginSchema,
+  refreshTokenSchema,
+  registerCandidateSchema,
+  USER_ROLES,
+} from '@ltwnc/shared';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export class RegisterCandidateDto extends createZodDto(registerCandidateSchema) {}
 
 export class LoginDto extends createZodDto(loginSchema) {}
+
+export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}
 
 /** Chỉ để mô tả trên Swagger; kiểu thật là AuthResponse trong @ltwnc/shared. */
 const authUserSchema = z.object({
@@ -21,6 +29,10 @@ export class AuthResponseDto extends createZodDto(
   z.object({
     accessToken: z.string().meta({ description: 'JWT, gửi kèm header Authorization: Bearer' }),
     accessTokenExpiresAt: z.iso.datetime(),
+    refreshToken: z
+      .string()
+      .meta({ description: 'Chuỗi ngẫu nhiên (không phải JWT), dùng một lần cho /auth/refresh' }),
+    refreshTokenExpiresAt: z.iso.datetime(),
     user: authUserSchema,
   }),
 ) {}
