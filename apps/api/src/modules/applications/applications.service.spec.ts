@@ -12,6 +12,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { CvsService } from '../cvs/cvs.service';
 import type { CvFile } from '../cvs/entities/cv-file.entity';
 import { Job } from '../jobs/entities/job.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import type { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
@@ -32,7 +33,8 @@ const openJob = (overrides: Partial<Job> = {}): Job =>
     status: JobStatus.PUBLISHED,
     isHidden: false,
     expiresAt: new Date(Date.now() + 86_400_000),
-    company: { status: CompanyStatus.APPROVED },
+    company: { status: CompanyStatus.APPROVED, ownerId: 'hr-1' },
+    translations: [{ locale: 'vi', title: 'Thực tập Backend' }],
     ...overrides,
   }) as Job;
 
@@ -52,6 +54,7 @@ describe('ApplicationsService.apply', () => {
   };
   const cvs = { findUsable: jest.fn<Promise<CvFile | null>, [string, string]>() };
   const users = { findById: jest.fn<Promise<User | null>, [string]>() };
+  const notifications = { create: jest.fn<Promise<void>, [unknown, string, object]>() };
   /** Repository giả trong transaction: ghi lại đơn và lịch sử đã tạo. */
   const applicationRepo = {
     create: jest.fn((data: Partial<Application>) => data),
@@ -85,6 +88,7 @@ describe('ApplicationsService.apply', () => {
         { provide: CvsService, useValue: cvs },
         { provide: UsersService, useValue: users },
         { provide: ApplicationTransitionService, useValue: {} },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
     service = moduleRef.get(ApplicationsService);
@@ -113,6 +117,15 @@ describe('ApplicationsService.apply', () => {
       toStatus: 'SUBMITTED',
       changedById: CANDIDATE,
       note: null,
+    });
+    expect(notifications.create).toHaveBeenCalledWith(manager, 'hr-1', {
+      type: 'NEW_APPLICATION',
+      data: {
+        applicationId: 'app-1',
+        jobId: JOB,
+        jobTitle: { vi: 'Thực tập Backend', en: null },
+        candidateName: 'An',
+      },
     });
     expect(getMine).toHaveBeenCalledWith(CANDIDATE, 'app-1', 'vi');
   });
@@ -174,5 +187,6 @@ describe('ApplicationsService.apply', () => {
       ErrorCode.APPLICATION_DUPLICATE,
     );
     expect(historyRepo.insert).not.toHaveBeenCalled();
+    expect(notifications.create).not.toHaveBeenCalled();
   });
 });

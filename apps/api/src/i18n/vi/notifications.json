@@ -1,0 +1,35 @@
+{
+  "NEW_APPLICATION": {
+    "title": "Có đơn ứng tuyển mới",
+    "body": "{candidateName} vừa ứng tuyển vào tin \"{jobTitle}\""
+  },
+  "APPLICATION_STATUS_CHANGED": {
+    "title": "Hồ sơ ứng tuyển của bạn được cập nhật",
+    "body": "\"{jobTitle}\": {fromStatus} → {toStatus}",
+    "note": "Ghi chú: {note}"
+  },
+  "APPLICATION_WITHDRAWN": {
+    "title": "Ứng viên đã rút đơn",
+    "body": "{candidateName} đã rút đơn ứng tuyển vào tin \"{jobTitle}\""
+  },
+  "COMPANY_APPROVED": {
+    "title": "Công ty đã được duyệt",
+    "body": "{companyName} đã được duyệt, bạn có thể đăng tin tuyển dụng."
+  },
+  "COMPANY_REJECTED": {
+    "title": "Công ty chưa được duyệt",
+    "body": "{companyName} bị từ chối. Lý do: {reason}. Hãy cập nhật thông tin công ty để gửi duyệt lại."
+  },
+  "JOB_HIDDEN": {
+    "title": "Tin tuyển dụng bị ẩn",
+    "body": "Tin \"{jobTitle}\" đã bị quản trị viên ẩn. Lý do: {reason}"
+  },
+  "STATUS": {
+    "SUBMITTED": "Đã nộp",
+    "REVIEWING": "Đang xem xét",
+    "INTERVIEW": "Phỏng vấn",
+    "PASSED": "Trúng tuyển",
+    "FAILED": "Không đạt",
+    "WITHDRAWN": "Đã rút đơn"
+  }
+}

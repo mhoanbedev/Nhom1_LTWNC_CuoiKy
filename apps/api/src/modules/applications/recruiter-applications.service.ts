@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   ApplicationActor,
   ErrorCode,
+  NotificationType,
   type ApplicationNote as ApplicationNoteDto,
   type ChangeApplicationStatusInput,
   type CreateApplicationNoteInput,
@@ -14,6 +15,7 @@ import {
 } from '@ltwnc/shared';
 import { Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { localizedText } from '../../common/utils/localized-text';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { Job } from '../jobs/entities/job.entity';
 import { ApplicationTransitionService } from './application-transition.service';
@@ -77,6 +79,21 @@ export class RecruiterApplicationsService {
       actor: ApplicationActor.RECRUITER,
       changedById: recruiterId,
       note: input.note ?? null,
+      notify: {
+        userId: application.candidateId,
+        payload: {
+          type: NotificationType.APPLICATION_STATUS_CHANGED,
+          data: {
+            applicationId: application.id,
+            jobId: application.jobId,
+            jobTitle: localizedText(application.job?.translations, 'title'),
+            fromStatus: application.status,
+            toStatus: input.to,
+            note: input.note ?? null,
+            candidateName: null,
+          },
+        },
+      },
     });
     return this.get(companyId, id, lang);
   }

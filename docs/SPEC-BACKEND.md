@@ -269,6 +269,9 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 
 - Notification được tạo trong cùng transaction với hành động sinh ra nó.
 - Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
+- `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
+- `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
+- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). `JOB_HIDDEN` nối vào khi làm chức năng ẩn tin.
 - Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
 
 ### 5.9 Thống kê

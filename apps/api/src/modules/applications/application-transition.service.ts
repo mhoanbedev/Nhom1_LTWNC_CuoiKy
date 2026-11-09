@@ -5,9 +5,11 @@ import {
   ErrorCode,
   type ApplicationActor,
   type ApplicationStatus,
+  type NotificationPayload,
 } from '@ltwnc/shared';
 import { DataSource } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import { Application } from './entities/application.entity';
 
@@ -17,6 +19,8 @@ export interface TransitionRequest {
   actor: ApplicationActor;
   changedById: string;
   note: string | null;
+  /** Thông báo cho bên còn lại, tạo trong cùng transaction với việc đổi trạng thái. */
+  notify: { userId: string; payload: NotificationPayload };
 }
 
 /**
@@ -24,14 +28,17 @@ export interface TransitionRequest {
  * - Không có trong bảng `canTransition` → 400 APPLICATION_INVALID_TRANSITION.
  * - Cập nhật có điều kiện `WHERE id = ? AND status = <trạng thái vừa đọc>`: người khác vừa đổi
  *   trước (không khớp dòng nào) → 409 APPLICATION_STATUS_CONFLICT, không ghi đè nhau.
- * - Đổi trạng thái và ghi lịch sử trong một transaction.
+ * - Đổi trạng thái, ghi lịch sử và tạo thông báo cho bên còn lại trong một transaction.
  */
 @Injectable()
 export class ApplicationTransitionService {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async transition(request: TransitionRequest): Promise<void> {
-    const { application, to, actor, changedById, note } = request;
+    const { application, to, actor, changedById, note, notify } = request;
     if (!canTransition(application.status, to, actor)) {
       throw new AppException(ErrorCode.APPLICATION_INVALID_TRANSITION);
     }
@@ -47,6 +54,7 @@ export class ApplicationTransitionService {
         changedById,
         note,
       });
+      await this.notifications.create(manager, notify.userId, notify.payload);
     });
   }
 }

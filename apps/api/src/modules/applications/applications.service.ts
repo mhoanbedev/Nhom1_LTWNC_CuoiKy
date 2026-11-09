@@ -4,6 +4,7 @@ import {
   ApplicationActor,
   ApplicationStatus,
   ErrorCode,
+  NotificationType,
   profileCompletion,
   ValidationMessage,
   type ApplyInput,
@@ -16,11 +17,13 @@ import {
 } from '@ltwnc/shared';
 import { DataSource, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { localizedText } from '../../common/utils/localized-text';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { isUniqueViolation } from '../../database/pg-errors';
 import { CvsService } from '../cvs/cvs.service';
 import { Job } from '../jobs/entities/job.entity';
 import { isOpen, isViewable } from '../jobs/public-jobs.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { UsersService } from '../users/users.service';
 import { ApplicationTransitionService } from './application-transition.service';
@@ -41,6 +44,7 @@ export class ApplicationsService {
     private readonly cvsService: CvsService,
     private readonly usersService: UsersService,
     private readonly transitions: ApplicationTransitionService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -58,7 +62,10 @@ export class ApplicationsService {
     input: ApplyInput,
     lang: Locale,
   ): Promise<CandidateApplication> {
-    const job = await this.jobs.findOne({ where: { id: jobId }, relations: { company: true } });
+    const job = await this.jobs.findOne({
+      where: { id: jobId },
+      relations: { company: true, translations: true },
+    });
     if (!job || !isViewable(job)) throw new AppException(ErrorCode.NOT_FOUND);
     if (!isOpen(job)) throw new AppException(ErrorCode.JOB_NOT_ACCEPTING);
 
@@ -78,6 +85,8 @@ export class ApplicationsService {
     if (!cv) throw new AppException(ErrorCode.CV_INVALID);
 
     const snapshot = await this.takeSnapshot(candidateId);
+    const recruiterId = job.company?.ownerId;
+    if (!recruiterId) throw new AppException(ErrorCode.INTERNAL_ERROR);
     let applicationId: string;
     try {
       applicationId = await this.dataSource.transaction(async (manager) => {
@@ -99,6 +108,15 @@ export class ApplicationsService {
           toStatus: ApplicationStatus.SUBMITTED,
           changedById: candidateId,
           note: null,
+        });
+        await this.notifications.create(manager, recruiterId, {
+          type: NotificationType.NEW_APPLICATION,
+          data: {
+            applicationId: application.id,
+            jobId: job.id,
+            jobTitle: localizedText(job.translations, 'title'),
+            candidateName: snapshot.candidate.name,
+          },
         });
         return application.id;
       });
@@ -134,14 +152,33 @@ export class ApplicationsService {
 
   /** Rút đơn: chỉ khi đơn còn mở (SUBMITTED, REVIEWING, INTERVIEW); đơn người khác trả 404. */
   async withdraw(candidateId: string, id: string, lang: Locale): Promise<CandidateApplication> {
-    const application = await this.applications.findOneBy({ id, candidateId });
-    if (!application) throw new AppException(ErrorCode.NOT_FOUND);
+    const application = await this.applications.findOne({
+      where: { id, candidateId },
+      relations: { job: { translations: true, company: true } },
+    });
+    const recruiterId = application?.job?.company?.ownerId;
+    if (!application || !recruiterId) throw new AppException(ErrorCode.NOT_FOUND);
     await this.transitions.transition({
       application,
       to: ApplicationStatus.WITHDRAWN,
       actor: ApplicationActor.CANDIDATE,
       changedById: candidateId,
       note: null,
+      notify: {
+        userId: recruiterId,
+        payload: {
+          type: NotificationType.APPLICATION_STATUS_CHANGED,
+          data: {
+            applicationId: application.id,
+            jobId: application.jobId,
+            jobTitle: localizedText(application.job?.translations, 'title'),
+            fromStatus: application.status,
+            toStatus: ApplicationStatus.WITHDRAWN,
+            note: null,
+            candidateName: application.profileSnapshot.candidate.name,
+          },
+        },
+      },
     });
     return this.getMine(candidateId, id, lang);
   }

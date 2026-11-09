@@ -1,8 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken, getRepositoryToken } from '@nestjs/typeorm';
-import { ApplicationActor, ApplicationStatus, ErrorCode } from '@ltwnc/shared';
+import { ApplicationActor, ApplicationStatus, ErrorCode, NotificationType } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { Job } from '../jobs/entities/job.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ApplicationTransitionService } from './application-transition.service';
 import { ApplicationNote } from './entities/application-note.entity';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
@@ -25,6 +26,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
     transaction: jest.fn((run: (m: typeof manager) => Promise<unknown>) => run(manager)),
   };
   const applications = { findOne: jest.fn<Promise<Application | null>, [object]>() };
+  const notifications = { create: jest.fn<Promise<void>, [unknown, string, object]>() };
   let transitions: ApplicationTransitionService;
   let service: RecruiterApplicationsService;
 
@@ -39,6 +41,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
         { provide: getRepositoryToken(Application), useValue: applications },
         { provide: getRepositoryToken(Job), useValue: {} },
         { provide: getRepositoryToken(ApplicationNote), useValue: {} },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
     transitions = moduleRef.get(ApplicationTransitionService);
@@ -47,6 +50,21 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
   });
 
   const submitted = { id: 'app-1', status: ApplicationStatus.SUBMITTED };
+  const notify = {
+    userId: 'candidate-1',
+    payload: {
+      type: NotificationType.APPLICATION_STATUS_CHANGED,
+      data: {
+        applicationId: 'app-1',
+        jobId: 'job-1',
+        jobTitle: { vi: 'Thực tập', en: null },
+        fromStatus: ApplicationStatus.SUBMITTED,
+        toStatus: ApplicationStatus.REVIEWING,
+        note: null,
+        candidateName: null,
+      },
+    },
+  } as const;
 
   it('đơn vào tin công ty khác (không tìm thấy theo companyId): 404, không đổi gì', async () => {
     applications.findOne.mockResolvedValue(null);
@@ -76,6 +94,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
           actor: ApplicationActor.RECRUITER,
           changedById: 'hr-1',
           note: null,
+          notify,
         }),
       ),
     ).toBe(ErrorCode.APPLICATION_INVALID_TRANSITION);
@@ -92,14 +111,21 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
           actor: ApplicationActor.RECRUITER,
           changedById: 'hr-1',
           note: null,
+          notify,
         }),
       ),
     ).toBe(ErrorCode.APPLICATION_STATUS_CONFLICT);
     expect(historyRepo.insert).not.toHaveBeenCalled();
+    expect(notifications.create).not.toHaveBeenCalled();
   });
 
   it('thành công: UPDATE kèm điều kiện trạng thái cũ, ghi lịch sử kèm ghi chú', async () => {
-    applications.findOne.mockResolvedValue(submitted as Application);
+    applications.findOne.mockResolvedValue({
+      ...submitted,
+      jobId: 'job-1',
+      candidateId: 'candidate-1',
+      job: { translations: [{ locale: 'vi', title: 'Thực tập' }] },
+    } as Application);
     await service.changeStatus(
       'hr-1',
       'company-a',
@@ -117,6 +143,19 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
       toStatus: 'REVIEWING',
       changedById: 'hr-1',
       note: 'Đã xem CV',
+    });
+    // Báo ứng viên trong cùng transaction, kèm ghi chú.
+    expect(notifications.create).toHaveBeenCalledWith(manager, 'candidate-1', {
+      type: 'APPLICATION_STATUS_CHANGED',
+      data: {
+        applicationId: 'app-1',
+        jobId: 'job-1',
+        jobTitle: { vi: 'Thực tập', en: null },
+        fromStatus: 'SUBMITTED',
+        toStatus: 'REVIEWING',
+        note: 'Đã xem CV',
+        candidateName: null,
+      },
     });
   });
 });

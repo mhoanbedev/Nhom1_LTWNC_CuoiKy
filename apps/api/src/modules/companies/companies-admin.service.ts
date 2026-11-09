@@ -1,17 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   CompanyStatus,
   ErrorCode,
+  NotificationType,
   type AdminCompaniesQuery,
   type AdminCompany,
   type Paginated,
 } from '@ltwnc/shared';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { localizedText } from '../../common/utils/localized-text';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { containsPattern } from '../../common/utils/search';
 import { RevalidateService } from '../../infrastructure/revalidate/revalidate.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { companyTags } from './company-tags';
 import { toAdminCompany } from './company.mapper';
 import { Company } from './entities/company.entity';
@@ -21,7 +24,9 @@ import { Company } from './entities/company.entity';
 export class CompaniesAdminService {
   constructor(
     @InjectRepository(Company) private readonly companies: Repository<Company>,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly revalidate: RevalidateService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Mới đăng ký lên trước. `q` tìm trên tên cả hai ngôn ngữ, gõ không dấu được. */
@@ -45,14 +50,23 @@ export class CompaniesAdminService {
     return paginate(rows.map(toAdminCompany), total, query);
   }
 
-  /** Duyệt: công ty đăng được tin. Gọi lại khi đã duyệt thì giữ nguyên (idempotent). */
+  /**
+   * Duyệt: công ty đăng được tin, nhà tuyển dụng nhận COMPANY_APPROVED (cùng transaction).
+   * Gọi lại khi đã duyệt thì giữ nguyên, không báo lại (idempotent).
+   */
   async approve(id: string): Promise<AdminCompany> {
     const company = await this.findById(id);
     if (company.status !== CompanyStatus.APPROVED) {
-      await this.companies.update(id, {
-        status: CompanyStatus.APPROVED,
-        rejectReason: null,
-        approvedAt: new Date(),
+      await this.dataSource.transaction(async (manager) => {
+        await manager.getRepository(Company).update(id, {
+          status: CompanyStatus.APPROVED,
+          rejectReason: null,
+          approvedAt: new Date(),
+        });
+        await this.notifications.create(manager, company.ownerId, {
+          type: NotificationType.COMPANY_APPROVED,
+          data: { companyId: id, companyName: localizedText(company.translations, 'name') },
+        });
       });
       // Công ty và các tin đã đăng của công ty vừa trở thành công khai.
       this.revalidate.notify(companyTags(id));
@@ -61,15 +75,22 @@ export class CompaniesAdminService {
   }
 
   /**
-   * Từ chối kèm lý do. Từ chối công ty đã duyệt cũng được (thu hồi duyệt): tin của công ty đó
-   * thôi công khai vì isJobPublic đòi công ty APPROVED.
+   * Từ chối kèm lý do; nhà tuyển dụng nhận COMPANY_REJECTED kèm lý do (cùng transaction).
+   * Từ chối công ty đã duyệt cũng được (thu hồi duyệt): tin của công ty đó thôi công khai vì
+   * isJobPublic đòi công ty APPROVED.
    */
   async reject(id: string, reason: string): Promise<AdminCompany> {
     const before = await this.findById(id);
-    await this.companies.update(id, {
-      status: CompanyStatus.REJECTED,
-      rejectReason: reason,
-      approvedAt: null,
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(Company).update(id, {
+        status: CompanyStatus.REJECTED,
+        rejectReason: reason,
+        approvedAt: null,
+      });
+      await this.notifications.create(manager, before.ownerId, {
+        type: NotificationType.COMPANY_REJECTED,
+        data: { companyId: id, companyName: localizedText(before.translations, 'name'), reason },
+      });
     });
     // Thu hồi duyệt: trang công ty và mọi tin của công ty phải biến khỏi web ngay.
     if (before.status === CompanyStatus.APPROVED) this.revalidate.notify(companyTags(id));

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CvsModule } from '../cvs/cvs.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Job } from '../jobs/entities/job.entity';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
@@ -19,6 +20,7 @@ import { RecruiterApplicationsService } from './recruiter-applications.service';
     ProfilesModule,
     CvsModule,
     UsersModule,
+    NotificationsModule,
   ],
   controllers: [CandidateApplicationsController, RecruiterApplicationsController],
   providers: [ApplicationsService, RecruiterApplicationsService, ApplicationTransitionService],
