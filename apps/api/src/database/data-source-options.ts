@@ -12,6 +12,8 @@ export function buildDataSourceOptions(url: string): DataSourceOptions {
     url,
     // Tên bảng, cột snake_case: createdAt -> created_at, JobTranslation -> job_translation.
     namingStrategy: new SnakeNamingStrategy(),
+    // id uuid dùng gen_random_uuid() có sẵn từ PostgreSQL 13, không cần extension uuid-ossp.
+    uuidExtension: 'pgcrypto',
     // Mọi thay đổi schema đi qua migration; không bao giờ để TypeORM tự sửa bảng.
     synchronize: false,
     migrationsRun: false,
