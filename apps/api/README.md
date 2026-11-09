@@ -8,11 +8,11 @@ Cần Node.js 24, Docker Desktop đang chạy và `make` (trên Windows dùng Gi
 
 ```bash
 cd apps/api
-make setup   # cài dependency, tạo .env, bật Postgres, in thông số kết nối
+make setup   # cài dependency, tạo .env, bật Postgres, chạy migration, in thông số kết nối
 make dev     # chạy API ở http://localhost:4000/api/v1
 ```
 
-Không có `make` thì dùng npm tương ứng: `npm install` ở gốc, `node scripts/env.mjs`, `docker compose up -d --wait`, `npm run dev`.
+Không có `make` thì dùng npm tương ứng: `npm install` ở gốc, `node scripts/env.mjs`, `docker compose up -d --wait`, `npm run migration:run`, `npm run dev`.
 
 ## Lệnh make
 
@@ -20,12 +20,16 @@ Gõ `make` để xem đầy đủ.
 
 | Lệnh | Việc làm |
 | --- | --- |
-| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres |
+| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres, chạy migration |
 | `make env` | Tạo `.env` từ `.env.example` hoặc bổ sung biến còn thiếu |
 | `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
 | `make logs` / `make ps` | Xem log / trạng thái container |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
+| `make migrate` / `make migrate-revert` | Chạy / lùi migration |
+| `make migration-show` | Liệt kê migration và trạng thái đã chạy |
+| `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
+| `make migration-create name=TenMoTa` | Tạo migration rỗng để viết SQL tay |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
 | `make lint` / `make format` / `make typecheck` | Kiểm tra và định dạng code |
