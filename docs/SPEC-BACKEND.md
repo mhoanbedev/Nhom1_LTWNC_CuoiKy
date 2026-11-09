@@ -334,7 +334,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 
 | Method | Path | Quyền | Ghi chú |
 | --- | --- | --- | --- |
-| GET | /jobs | Guest | Lọc theo `q`, `skills[]`, `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` |
+| GET | /jobs | Guest | Lọc theo `q`, `skills` (`?skills=a&skills=b`, `?skills=a,b` hoặc `?skills[]=a`; khớp khi tin có ít nhất một kỹ năng), `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` (mặc định khi có `q`, theo `similarity` của pg_trgm) |
 | GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `isSaved`, `hasApplied` |
 | GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp |
 | GET | /companies | Guest |  |
@@ -668,7 +668,7 @@ Backend phải cấp đủ dữ liệu và tín hiệu để frontend làm đư�
 
 | Thuộc tính JSON-LD | Lấy từ |
 | --- | --- |
-| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` đã render từ Markdown và đã sanitize |
+| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
 | datePosted, validThrough | `publishedAt`, `expiresAt` (ISO 8601) |
 | employmentType | Cố định `INTERN` |
 | identifier | `shortId` |
