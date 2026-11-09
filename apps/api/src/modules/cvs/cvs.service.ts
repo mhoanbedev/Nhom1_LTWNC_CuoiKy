@@ -126,6 +126,11 @@ export class CvsService {
    * - Nhà tuyển dụng: CV gắn với đơn nộp vào tin của công ty mình (thêm ở bước Applications).
    * - Admin và mọi trường hợp khác: 404, không lộ CV có tồn tại hay không.
    */
+  /** CV chưa xóa của chính ứng viên, dùng khi nộp đơn; không có thì null (nơi gọi trả CV_INVALID). */
+  findUsable(candidateId: string, id: string): Promise<CvFile | null> {
+    return this.cvs.findOneBy({ id, candidateId, deletedAt: IsNull() });
+  }
+
   async download(user: RequestUser, id: string): Promise<CvDownload> {
     const cv =
       user.role === Role.CANDIDATE

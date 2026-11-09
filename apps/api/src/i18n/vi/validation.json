@@ -10,5 +10,6 @@
   "JOB_SKILL_REQUIRED": "Tin cần có ít nhất một kỹ năng",
   "END_BEFORE_START": "Thời gian kết thúc không được trước thời gian bắt đầu",
   "PHONE_INVALID": "Số điện thoại không hợp lệ (vd 0912345678 hoặc +84912345678)",
-  "DATE_IN_PAST": "Ngày phải trước hôm nay"
+  "DATE_IN_PAST": "Ngày phải trước hôm nay",
+  "PROFILE_STEP_INCOMPLETE": "Bước bắt buộc chưa hoàn thành"
 }

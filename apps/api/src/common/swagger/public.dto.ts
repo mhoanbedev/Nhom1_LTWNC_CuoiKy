@@ -70,6 +70,10 @@ export class PublicJobDetailDto extends createZodDto(
     isAcceptingApplications: z.boolean(),
     seo: z.object({ indexable: z.boolean() }),
     isSaved: z.boolean().optional().meta({ description: 'Chỉ có khi ứng viên gửi kèm token' }),
+    hasApplied: z
+      .boolean()
+      .optional()
+      .meta({ description: 'Đã nộp đơn (kể cả đã rút); chỉ có khi ứng viên gửi kèm token' }),
   }),
 ) {}
 

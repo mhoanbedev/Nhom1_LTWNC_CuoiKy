@@ -31,6 +31,7 @@ import { CompaniesModule } from './modules/companies/companies.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { CvsModule } from './modules/cvs/cvs.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -76,6 +77,7 @@ import { UsersModule } from './modules/users/users.module';
     JobsModule,
     ProfilesModule,
     CvsModule,
+    ApplicationsModule,
     AdminModule,
   ],
   providers: [

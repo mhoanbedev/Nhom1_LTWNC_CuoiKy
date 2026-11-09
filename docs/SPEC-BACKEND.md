@@ -216,6 +216,11 @@ Khi nộp đơn, server kiểm lần lượt:
 
 Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ sơ tại thời điểm nộp), ghi một dòng lịch sử (null sang SUBMITTED), và tạo thông báo `NEW_APPLICATION` cho recruiter. Đơn đã rút thì không nộp lại vào cùng tin đó được.
 
+- `PROFILE_INCOMPLETE` kèm `details: [{ field: <bước>, message }]` liệt kê bước bắt buộc còn thiếu, để frontend dẫn tới đúng bước. `coverLetter` không bắt buộc, tối đa 3000 ký tự; `cvFileId` bắt buộc (frontend chọn sẵn CV mặc định).
+- `profileSnapshot` gồm tên, email, avatar của ứng viên và hồ sơ 4 bước lúc nộp (tên kỹ năng tiếng Việt, kèm `skillId`, `slug`).
+- Khóa ngoại từ đơn tới tin và CV là `NO ACTION`: không xóa được tin hay CV đang có đơn trỏ tới.
+- `GET /jobs/:slug` có thêm `hasApplied` khi người xem là ứng viên (kể cả đơn đã rút).
+
 ### 5.4 Trạng thái hồ sơ ứng tuyển
 
 | Từ | Recruiter được chuyển sang | Candidate được chuyển sang |
