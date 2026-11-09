@@ -247,6 +247,7 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - 4 bước, mỗi bước một endpoint `PUT`, validate bằng schema riêng của bước đó. Frontend import cùng schema từ `packages/shared`.
 - Lưu thành công thì thêm bước vào `completedSteps`. Response kèm `completion: { steps, percent }`.
 - Lưu nháp giữa các bước là việc của frontend (Zustand persist). Backend chỉ lưu khi người dùng bấm "Tiếp".
+- Mỗi `PUT` gửi đủ dữ liệu của bước và thay toàn bộ (học vấn, kỹ năng, dự án là danh sách). Tháng dùng dạng `YYYY-MM` (cột `date` lưu ngày 1 của tháng), ngày sinh `YYYY-MM-DD`. Bước dự án được gửi mảng rỗng mà vẫn tính là xong. `completion` gồm `percent`, `canApply` (đã xong BASIC, EDUCATION, SKILLS) và `missingRequired`, tính bằng hàm thuần `profileCompletion` trong `packages/shared`.
 
 ### 5.7 Gợi ý việc theo kỹ năng (nâng cao)
 

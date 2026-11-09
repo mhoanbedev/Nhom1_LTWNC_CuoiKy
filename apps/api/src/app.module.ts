@@ -29,6 +29,7 @@ import { RevalidateModule } from './infrastructure/revalidate/revalidate.module'
 import { AdminModule } from './modules/admin/admin.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { JobsModule } from './modules/jobs/jobs.module';
+import { ProfilesModule } from './modules/profiles/profiles.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -72,6 +73,7 @@ import { UsersModule } from './modules/users/users.module';
     MetaModule,
     CompaniesModule,
     JobsModule,
+    ProfilesModule,
     AdminModule,
   ],
   providers: [
