@@ -10,13 +10,13 @@
 
 ## Luật cốt lõi (chi tiết ở CONVENTIONS.md)
 
-- Controller → Service → Repository/Mapper. Controller không có nghiệp vụ, service không biết HTTP, không trả entity thô.
+- Controller → Service (dùng `Repository<Entity>` TypeORM inject sẵn, không tách lớp repository riêng) → Mapper. Controller không có nghiệp vụ, không đụng DB; service không biết HTTP; không trả entity thô. File module để phẳng, chỉ tách `entities/`, `dto/`.
 - Lỗi: chỉ `throw new AppException(ErrorCode.X, params?)`. Mã mới thêm đủ: `ErrorCode` (shared), `ERROR_HTTP_STATUS`, `src/i18n/vi/errors.json`, `src/i18n/en/errors.json`.
 - DTO: `createZodDto(schema)`; schema dùng chung với web đặt ở `packages/shared`.
 - Swagger: `@ApiTags`, `@ApiOperation`, `@ApiDataResponse(Dto)`, `@ApiErrorResponses(...)` trên mọi endpoint.
 - DB: entity kế thừa `AppBaseEntity`; đổi schema bằng migration, không bật `synchronize`; ghi nhiều bảng dùng transaction.
 - Env: khai trong `src/config/env.schema.ts` + `.env.example`; đọc qua ConfigService.
-- Kiểm quyền hai lớp: Guard + kiểm lại trong service.
+- Kiểm quyền hai lớp: Guard theo vai trò + service kiểm sở hữu (lọc theo `companyId`/`candidateId`). Không có guard sở hữu.
 - Không `any`, không `!`, không log mật khẩu/token.
 - Hàm thuần và service mới có `*.spec.ts` đặt cạnh.
 

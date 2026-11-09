@@ -478,41 +478,36 @@ apps/api/
         └── applications/   notifications/   admin/   meta/   seo/   health/
 ```
 
-Mọi module trong `modules/` có cùng bố cục. Ví dụ module `applications`:
+Mọi module trong `modules/` có cùng bố cục: file để phẳng ở gốc thư mục module, chỉ tách `entities/` và `dto/`. Ví dụ module `applications`:
 
 ```text
 modules/applications/
 ├── applications.module.ts
-├── controllers/
-│   ├── candidate-applications.controller.ts    /jobs/:jobId/applications, /me/applications
-│   └── recruiter-applications.controller.ts    /recruiter/applications
-├── services/
-│   ├── applications.service.ts                 nộp đơn, rút đơn, đọc đơn
-│   ├── application-status.service.ts           chuyển trạng thái, lịch sử
-│   └── application-notes.service.ts
-├── repositories/
-│   └── applications.repository.ts              query phức tạp (lọc, thống kê)
+├── candidate-applications.controller.ts    /jobs/:jobId/applications, /me/applications
+├── recruiter-applications.controller.ts    /recruiter/applications
+├── applications.service.ts                 nộp đơn, rút đơn, đọc đơn của ứng viên
+├── recruiter-applications.service.ts       danh sách đơn, chi tiết, ghi chú của nhà tuyển dụng
+├── application-transition.service.ts       chuyển trạng thái, lịch sử, thông báo
+├── application.mapper.ts                   entity → response, ẩn ghi chú với candidate
 ├── entities/
 │   ├── application.entity.ts
 │   ├── application-status-history.entity.ts
 │   └── application-note.entity.ts
-├── dto/                                        create-application, change-status, query-applications
-├── mappers/
-│   └── application.mapper.ts                   entity → response, ẩn ghi chú với candidate
-├── guards/
-│   └── application-access.guard.ts
-└── *.spec.ts                                   test đặt cạnh file được test
+├── dto/                                    create-application, change-status, query-applications
+└── *.spec.ts                               test đặt cạnh file được test
 ```
 
 | Lớp | Được làm | Không được làm |
 | --- | --- | --- |
-| Controller | Khai báo route, guard, decorator Swagger; nhận DTO; gọi service; trả kết quả của mapper | Chứa nghiệp vụ, gọi repository |
-| Service | Nghiệp vụ, transaction, kiểm quyền sở hữu, ném `AppException`, phát event sau commit | Biết về `Request`/`Response` của HTTP |
-| Repository | Query TypeORM phức tạp (QueryBuilder, tìm kiếm, thống kê) | Chứa quy tắc nghiệp vụ |
+| Controller | Khai báo route, `@Roles`/`@Public`/`@OptionalAuth`, decorator Swagger; nhận DTO; gọi service | Chứa nghiệp vụ, inject repository hay `DataSource` |
+| Service | Nghiệp vụ, transaction, kiểm quyền sở hữu, ném `AppException`, phát event sau commit; truy vấn DB qua `Repository<Entity>` của TypeORM, QueryBuilder hoặc `DataSource` | Biết về `Request`/`Response` của HTTP |
+| Entity (TypeORM, kiểu Data Mapper) | Khai báo bảng, cột, quan hệ, index | Chứa logic hay gọi DB |
 | Mapper | Đổi entity thành response, chọn bản dịch theo locale | Trả entity thô ra ngoài |
 | Domain thuần (`packages/shared/src/domain`) | Hàm không phụ thuộc framework: `canTransition`, `matchScore`, `isJobPublic` | Import NestJS hay TypeORM |
 
-Module chỉ ghi vào bảng của chính nó. Cần dữ liệu hoặc hành động của module khác thì gọi service mà module đó export.
+Dùng mẫu Data Mapper của TypeORM (entity không tự đọc/ghi, mọi truy cập qua `Repository<Entity>`) nhưng **không tách tầng repository riêng**. Đây là đánh đổi có chủ ý: ít file hơn, đổi lại service phụ thuộc trực tiếp vào API của TypeORM. Query dài như tìm kiếm, thống kê viết trong hàm `private` của service; SQL thô chỉ dùng cho khóa `FOR UPDATE`, `UPDATE ... RETURNING`, `ON CONFLICT` và luôn truyền tham số.
+
+Module chỉ ghi vào bảng của chính nó; cần ghi bảng của module khác thì gọi service mà module đó export (truyền `EntityManager` khi chung transaction). Đọc bảng của module khác bằng join thì được.
 
 ### Validate và lỗi (nhóm 7)
 
@@ -570,15 +565,14 @@ Lỗi validate trả `details: [{ field, message }]`.
 
 ### Cấu trúc NestJS (nhóm 6 và 7)
 
-- Mỗi module chia Module, Controller, Service. Repository được inject qua `@InjectRepository(Entity)` sau khi đăng ký bằng `TypeOrmModule.forFeature`; controller không gọi repository trực tiếp. Thao tác nhiều bảng chạy trong `dataSource.transaction()`.
+- Mỗi module chia Module, Controller, Service. Repository được inject qua `@InjectRepository(Entity)` sau khi đăng ký bằng `TypeOrmModule.forFeature`; controller không đụng repository; service dùng repository trực tiếp, không có lớp repository tự viết. Thao tác nhiều bảng chạy trong `dataSource.transaction()`.
 - 2 Interceptor: `TransformInterceptor` bọc response, `LoggingInterceptor` ghi method, path, status, thời gian và requestId. Đề yêu cầu ít nhất 1.
 - 1 Exception Filter: `AllExceptionsFilter` lo format lỗi, dịch message và map lỗi TypeORM.
 - Guard:
   - `JwtAuthGuard` đặt global, route nào công khai thì gắn `@Public()`.
   - `RolesGuard` đi kèm decorator `@Roles()`.
   - `@OptionalAuth()` cho `/jobs/:slug`: có token hợp lệ thì nhận diện người xem, không có hay token sai/hết hạn thì coi như khách (không trả 401). Đọc user bằng `@ViewerUser()`.
-  - Guard sở hữu `JobOwnershipGuard` và `ApplicationAccessGuard`: đọc id từ param rồi so `companyId` hoặc `candidateId`.
-- Service kiểm quyền sở hữu thêm một lần nữa (truyền `userId` vào mọi hàm), nên ngay trong backend đã có 2 lớp bảo vệ.
+- Quyền sở hữu kiểm trong service: controller truyền user từ `@CurrentUser()`, service lọc theo `companyId` hoặc `candidateId` ngay trong câu truy vấn (không thấy thì 404/403 theo mục 2). Cùng Guard vai trò, backend có 2 lớp bảo vệ; không dùng guard sở hữu riêng để khỏi đọc DB hai lần.
 - Decorator tự viết: `@CurrentUser()`, `@Lang()`, `@Roles()`, `@Public()`.
 
 ### Bảo mật, cấu hình, hiệu năng
@@ -644,7 +638,7 @@ Luật nằm trong 2 file. `apps/api/CONVENTIONS.md` là bản đầy đủ cho 
 **Bảo mật**
 
 - Không log mật khẩu, token, secret.
-- Kiểm quyền hai lớp: Guard và kiểm lại trong service.
+- Kiểm quyền hai lớp: Guard theo vai trò và kiểm sở hữu trong service.
 - Secret chỉ đọc từ biến môi trường qua `ConfigService`, không đọc `process.env` rải rác.
 
 **Test và Git**
@@ -813,7 +807,7 @@ Backend bàn giao 8 thứ dưới đây trước khi nhóm frontend bắt đầu
 | 3 | Quản lý state |  | Zustand persist cho hồ sơ, Context cho theme và ngôn ngữ |
 | 4 | Hiệu năng | Phân trang, index, tránh N+1 | Code-splitting, memo có lý do, phân trang hoặc virtualization, ảnh Lighthouse trước và sau |
 | 5 | Kiểm thử | Từ 40 test, coverage từ 70% | Test component có tương tác, test async mock API bằng RTL |
-| 6 | Xác thực, phân quyền | JWT, RolesGuard, guard sở hữu, kiểm lại trong service | Auth.js, Middleware chặn route, Server Action kiểm session |
+| 6 | Xác thực, phân quyền | JWT, RolesGuard, kiểm sở hữu trong service | Auth.js, Middleware chặn route, Server Action kiểm session |
 | 7 | Backend và API | Toàn bộ |  |
 | 8 | Render và SEO | Dữ liệu JSON-LD, sitemap, webhook revalidate | SSG/ISR/SSR, loading/error/not-found, Metadata, sitemap, robots |
 

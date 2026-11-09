@@ -32,7 +32,7 @@ src/
 │   ├── entities/    AppBaseEntity
 │   ├── exceptions/  AppException, ERROR_HTTP_STATUS
 │   ├── filters/     AllExceptionsFilter
-│   ├── guards/      JwtAuthGuard, RolesGuard, OptionalJwtGuard
+│   ├── guards/      JwtAuthGuard (xử lý cả @Public, @OptionalAuth), RolesGuard
 │   ├── i18n/        resolveLocale, dịch lỗi Zod
 │   ├── interceptors/ TransformInterceptor, LoggingInterceptor
 │   ├── middleware/  requestId, locale
@@ -44,37 +44,39 @@ src/
 └── modules/<tên>/   một thư mục cho mỗi module nghiệp vụ
 ```
 
-Một module nghiệp vụ có cùng bố cục (tạo thư mục con khi cần, không tạo thư mục rỗng):
+Một module nghiệp vụ để file phẳng ở gốc thư mục module, chỉ tách thư mục con `entities/`, `dto/` (thêm `google/`, `strategies/`... khi một nhóm file đủ lớn). Không tạo thư mục rỗng.
 
 ```text
 modules/applications/
 ├── applications.module.ts
-├── controllers/   (hoặc <tên>.controller.ts khi chỉ có một)
-├── services/
-├── repositories/
+├── candidate-applications.controller.ts     mỗi nhóm route một controller
+├── recruiter-applications.controller.ts
+├── applications.service.ts                  nghiệp vụ của ứng viên
+├── recruiter-applications.service.ts        nghiệp vụ của nhà tuyển dụng
+├── application-transition.service.ts        chuyển trạng thái dùng chung
+├── application.mapper.ts                    entity → response
 ├── entities/
 ├── dto/
-├── mappers/
-├── guards/
-└── *.spec.ts      test đặt cạnh file được test
+└── *.spec.ts                                test đặt cạnh file được test
 ```
 
-**Bắt buộc:** thêm tính năng mới bằng một thư mục trong `modules/`; module chỉ ghi vào bảng của chính nó, cần dữ liệu hoặc hành động của module khác thì gọi service mà module đó export.
+**Bắt buộc:** thêm tính năng mới bằng một thư mục trong `modules/`. Module chỉ **ghi** vào bảng của chính nó; cần ghi bảng của module khác (vd tạo thông báo) thì gọi service mà module đó export, truyền `EntityManager` khi phải chung transaction. **Đọc** bảng của module khác bằng join/QueryBuilder thì được.
 
 ## 3. Phân lớp
 
 | Lớp | Được làm | Không được làm |
 | --- | --- | --- |
-| Controller | Route, guard, decorator Swagger; nhận DTO; gọi service; trả kết quả của mapper | Chứa nghiệp vụ, gọi repository |
-| Service | Nghiệp vụ, transaction, kiểm quyền sở hữu, ném `AppException`, phát event sau commit | Biết `Request`/`Response` của HTTP |
-| Repository | Query TypeORM phức tạp (QueryBuilder, tìm kiếm, thống kê) | Chứa quy tắc nghiệp vụ |
+| Controller | Route, `@Roles`/`@Public`/`@OptionalAuth`, decorator Swagger; nhận DTO; gọi service | Chứa nghiệp vụ, inject repository hay `DataSource` |
+| Service | Nghiệp vụ, transaction, kiểm quyền sở hữu, ném `AppException`, phát event sau commit; truy vấn DB qua `Repository<Entity>` của TypeORM (`@InjectRepository`), QueryBuilder hoặc `DataSource` | Biết `Request`/`Response` của HTTP |
+| Entity (TypeORM, kiểu Data Mapper) | Khai báo bảng, cột, quan hệ, index | Chứa logic hay gọi DB |
 | Mapper | Đổi entity thành response, chọn bản dịch theo locale | Trả entity thô ra ngoài |
 | Domain thuần (`packages/shared/src/domain`) | Hàm không phụ thuộc framework: `canTransition`, `matchScore`, `isJobPublic` | Import NestJS hay TypeORM |
 
 **Bắt buộc:**
 
 - Controller không chứa nghiệp vụ; service không biết HTTP; không bao giờ trả entity thô.
-- Kiểm quyền hai lớp: Guard (vai trò, sở hữu) và kiểm lại trong service (truyền `userId` vào hàm service).
+- Dùng mẫu Data Mapper của TypeORM (entity không tự đọc/ghi, mọi truy cập qua `Repository<Entity>`) nhưng **không tách tầng repository riêng**. Đây là đánh đổi có chủ ý: ít file hơn, đổi lại service phụ thuộc trực tiếp vào API của TypeORM. Query dài (tìm kiếm, thống kê) viết trong hàm `private` của service, có comment giải thích; SQL thô chỉ dùng khi QueryBuilder không diễn đạt được (khóa `FOR UPDATE`, `UPDATE ... RETURNING`, `ON CONFLICT`) và luôn truyền tham số `$1`, không nối chuỗi.
+- Kiểm quyền hai lớp: Guard theo vai trò (`JwtAuthGuard` global + `RolesGuard` với `@Roles`), rồi service kiểm quyền sở hữu bằng cách lọc theo `companyId`/`candidateId` lấy từ `@CurrentUser()` (truyền vào hàm service). Không có guard sở hữu riêng.
 - Truy cập tài nguyên không phải của mình: tài nguyên công khai trả 403, tài nguyên riêng tư (đơn, CV) trả 404.
 
 ## 4. Đặt tên
@@ -152,7 +154,7 @@ modules/applications/
 
 **Bắt buộc:**
 
-- Hàm thuần và service mới phải có `*.spec.ts` đặt cạnh file. Service test bằng mock repository (`getRepositoryToken(Entity)`).
+- Hàm thuần và service mới phải có `*.spec.ts` đặt cạnh file. Service test bằng mock repository (`getRepositoryToken(Entity)`); query phức tạp và quyền sở hữu được phủ thêm bằng e2e trên DB thật.
 - Test e2e đặt trong `test/*.e2e-spec.ts`, dựng app bằng `configureApp(app)` giống `main.ts`; cần Postgres đang chạy (`make up`).
 - Tên test viết tiếng Việt, mô tả hành vi: `it('trả 409 khi nộp trùng đơn')`.
 - Mục tiêu: coverage từ 70% ở `packages/shared/src/domain` và các file `*.service.ts`.
