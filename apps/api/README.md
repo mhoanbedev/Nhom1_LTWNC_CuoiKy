@@ -8,7 +8,7 @@ Cần Node.js 24, Docker Desktop đang chạy và `make` (trên Windows dùng Gi
 
 ```bash
 cd apps/api
-make setup   # cài dependency, tạo .env, bật Postgres + pgAdmin
+make setup   # cài dependency, tạo .env, bật Postgres, in thông số kết nối
 make dev     # chạy API ở http://localhost:4000/api/v1
 ```
 
@@ -20,12 +20,12 @@ Gõ `make` để xem đầy đủ.
 
 | Lệnh | Việc làm |
 | --- | --- |
-| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Docker |
+| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres |
 | `make env` | Tạo `.env` từ `.env.example` hoặc bổ sung biến còn thiếu |
-| `make up` / `make down` | Bật / tắt Postgres và pgAdmin (giữ dữ liệu) |
+| `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
 | `make logs` / `make ps` | Xem log / trạng thái container |
 | `make db-shell` | Mở `psql` trong container |
-| `make pgadmin` | In URL và tài khoản pgAdmin |
+| `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
 | `make lint` / `make format` / `make typecheck` | Kiểm tra và định dạng code |
@@ -38,7 +38,8 @@ Gõ `make` để xem đầy đủ.
 | --- | --- |
 | API | `http://localhost:4000/api/v1` |
 | PostgreSQL (Docker) | `localhost:5434` (5432 thường bị PostgreSQL cài sẵn chiếm) |
-| pgAdmin | `http://localhost:5050` |
+
+Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5434`, user/mật khẩu/database `ltwnc`).
 
 ## Biến môi trường
 
@@ -48,5 +49,4 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | --- | --- |
 | `NODE_ENV`, `PORT`, `FRONTEND_URL` | Môi trường, cổng API, domain frontend (CORS) |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` | Postgres trong Docker |
-| `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`, `PGADMIN_PORT` | Tài khoản và cổng pgAdmin |
 | `DATABASE_URL` | Chuỗi kết nối app dùng |

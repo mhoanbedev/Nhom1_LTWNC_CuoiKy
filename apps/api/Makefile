@@ -4,14 +4,14 @@
 # Dòng `target: ## mô tả` chính là nội dung của `make help`.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell pgadmin
+.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info
 
 ##@ Chung
 help: ## In danh sách lệnh
 	@node scripts/make-help.mjs
 
-setup: install env up ## Lần đầu: cài dependency, tạo .env, bật Docker
-	@node scripts/pgadmin-info.mjs
+setup: install env up ## Lần đầu: cài dependency, tạo .env, bật Postgres
+	@node scripts/db-info.mjs
 
 env: ## Tạo .env từ .env.example hoặc bổ sung biến còn thiếu
 	@node scripts/env.mjs
@@ -19,11 +19,11 @@ env: ## Tạo .env từ .env.example hoặc bổ sung biến còn thiếu
 install: ## Cài dependency (chạy ở gốc monorepo)
 	npm install --prefix ../..
 
-##@ Docker (PostgreSQL + pgAdmin)
-up: ## Bật Postgres và pgAdmin
+##@ Docker (PostgreSQL)
+up: ## Bật Postgres
 	docker compose up -d --wait
 
-down: ## Tắt Postgres và pgAdmin (giữ dữ liệu)
+down: ## Tắt Postgres (giữ dữ liệu)
 	docker compose down
 
 logs: ## Xem log container
@@ -35,8 +35,8 @@ ps: ## Xem trạng thái container
 db-shell: ## Mở psql trong container
 	docker compose exec postgres sh -c "psql -U $$POSTGRES_USER -d $$POSTGRES_DB"
 
-pgadmin: ## In URL và tài khoản pgAdmin
-	@node scripts/pgadmin-info.mjs
+db-info: ## In thông số kết nối Postgres cho pgAdmin trên máy
+	@node scripts/db-info.mjs
 
 ##@ Phát triển
 dev: ## Chạy API ở chế độ watch (build packages/shared trước)

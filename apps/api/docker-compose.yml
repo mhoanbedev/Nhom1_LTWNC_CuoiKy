@@ -1,4 +1,5 @@
-# Hạ tầng dev: chỉ chạy database. API chạy trực tiếp trên máy bằng `make dev`.
+# Hạ tầng dev: chỉ chạy PostgreSQL. API chạy trực tiếp trên máy bằng `make dev`.
+# Xem dữ liệu bằng pgAdmin (hoặc DBeaver...) cài trên máy; `make db-info` in thông số kết nối.
 name: ltwnc
 
 services:
@@ -20,23 +21,5 @@ services:
       timeout: 5s
       retries: 10
 
-  pgadmin:
-    image: dpage/pgadmin4
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-    ports:
-      - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
-    volumes:
-      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
-      - pgadmin:/var/lib/pgadmin
-    depends_on:
-      postgres:
-        condition: service_healthy
-
 volumes:
   pgdata:
-  pgadmin:
