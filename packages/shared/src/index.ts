@@ -22,3 +22,4 @@ export * from './domain/job-visibility';
 export * from './domain/job-lifecycle';
 export * from './domain/profile-completion';
 export * from './domain/cv-file';
+export * from './domain/application-status';
