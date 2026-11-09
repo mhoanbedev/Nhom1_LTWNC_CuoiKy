@@ -7,6 +7,7 @@ import {
   jobPublishBlockers,
   JobStatus,
   normalizeSearchText,
+  RevalidateTag,
   slugify,
   type CreateJobInput,
   type JobPublishInput,
@@ -24,6 +25,7 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { containsPattern } from '../../common/utils/search';
+import { RevalidateService } from '../../infrastructure/revalidate/revalidate.service';
 import { CompaniesService } from '../companies/companies.service';
 import { JobSkill } from './entities/job-skill.entity';
 import { JobTranslation } from './entities/job-translation.entity';
@@ -80,6 +82,7 @@ export class RecruiterJobsService {
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly companiesService: CompaniesService,
+    private readonly revalidate: RevalidateService,
   ) {}
 
   /** Sửa gần đây lên trước. `q` tìm trên tiêu đề, nội dung cả hai ngôn ngữ, gõ không dấu được. */
@@ -138,7 +141,7 @@ export class RecruiterJobsService {
    * `skills` gửi lên là thay cả danh sách; `translations` gửi lên thì bỏ `en` là xóa bản en.
    */
   async update(companyId: string | null, id: string, input: UpdateJobInput): Promise<RecruiterJob> {
-    await this.dataSource.transaction(async (manager) => {
+    const updated = await this.dataSource.transaction(async (manager) => {
       const job = await this.findOwned(manager, companyId, id);
       const columns = toColumns(input);
       if (input.isPaid === false) {
@@ -168,7 +171,10 @@ export class RecruiterJobsService {
       if (input.skills) await this.replaceSkills(manager, job.id, input.skills);
       // Sửa bản dịch hay kỹ năng cũng tính là tin vừa được sửa.
       await manager.getRepository(Job).update(job.id, { updatedAt: new Date() });
+      return job;
     });
+    // Tin nháp chưa có trang công khai; tin đã đăng hay đã đóng thì trang chi tiết cần làm mới.
+    if (updated.status !== JobStatus.DRAFT) this.revalidate.notify(jobTags(updated));
     return this.get(companyId, id);
   }
 
@@ -226,6 +232,7 @@ export class RecruiterJobsService {
   private async transition(job: Job, from: JobStatus, changes: Partial<Job>): Promise<void> {
     const result = await this.jobs.update({ id: job.id, status: from }, changes);
     if (!result.affected) throw new AppException(ErrorCode.JOB_INVALID_TRANSITION);
+    this.revalidate.notify(jobTags(job));
   }
 
   /** Chỉ xóa được bản nháp; tin đã đăng thì đóng chứ không xóa (giữ đơn ứng tuyển). */
@@ -304,6 +311,16 @@ export class RecruiterJobsService {
       skills.map((skill) => ({ jobId, skillId: skill.skillId, isRequired: skill.isRequired })),
     );
   }
+}
+
+/** Tag cần làm mới khi một tin công khai đổi (bảng webhook ở mục 9 của đặc tả). */
+export function jobTags(job: Pick<Job, 'id' | 'companyId'>): string[] {
+  return [
+    RevalidateTag.job(job.id),
+    RevalidateTag.company(job.companyId),
+    RevalidateTag.JOBS_LIST,
+    RevalidateTag.SITEMAP,
+  ];
 }
 
 function publishInputOf(job: Job, expiresAt: Date | null): JobPublishInput {

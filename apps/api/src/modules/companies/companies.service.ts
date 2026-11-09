@@ -15,6 +15,8 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { assertImageFile, type UploadedFileLike } from '../../common/files/image-file';
 import { uniqueSlug } from '../../common/utils/unique-slug';
 import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service';
+import { RevalidateService } from '../../infrastructure/revalidate/revalidate.service';
+import { companyTags } from './company-tags';
 import { toRecruiterCompany } from './company.mapper';
 import { CompanyTranslation } from './entities/company-translation.entity';
 import { Company } from './entities/company.entity';
@@ -45,6 +47,7 @@ export class CompaniesService {
     @InjectRepository(Company) private readonly companies: Repository<Company>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly cloudinary: CloudinaryService,
+    private readonly revalidate: RevalidateService,
   ) {}
 
   /** Tạo công ty PENDING kèm bản dịch, trong transaction đăng ký nhà tuyển dụng. */
@@ -87,7 +90,7 @@ export class CompaniesService {
    * Bỏ `en` là xóa bản tiếng Anh; slug của bản dịch đã có giữ nguyên dù đổi tên.
    */
   async updateForOwner(ownerId: string, input: CompanyInfoInput): Promise<RecruiterCompany> {
-    await this.dataSource.transaction(async (manager) => {
+    const before = await this.dataSource.transaction(async (manager) => {
       const company = await this.findOwned(ownerId, manager);
       const resubmit =
         company.status === CompanyStatus.REJECTED
@@ -103,7 +106,10 @@ export class CompaniesService {
       } else if (en) {
         await manager.getRepository(CompanyTranslation).delete(en.id);
       }
+      return company;
     });
+    // Chỉ công ty đã duyệt mới có trang công khai cần làm mới.
+    if (before.status === CompanyStatus.APPROVED) this.revalidate.notify(companyTags(before.id));
     return this.getForOwner(ownerId);
   }
 
@@ -128,6 +134,7 @@ export class CompaniesService {
       throw error;
     }
     if (company.logoPublicId) await this.cloudinary.deleteImage(company.logoPublicId);
+    if (company.status === CompanyStatus.APPROVED) this.revalidate.notify(companyTags(company.id));
     return { logoUrl: uploaded.url };
   }
 

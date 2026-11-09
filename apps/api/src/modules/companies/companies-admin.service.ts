@@ -11,13 +11,18 @@ import { Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { containsPattern } from '../../common/utils/search';
+import { RevalidateService } from '../../infrastructure/revalidate/revalidate.service';
+import { companyTags } from './company-tags';
 import { toAdminCompany } from './company.mapper';
 import { Company } from './entities/company.entity';
 
 /** Duyệt doanh nghiệp phía admin (mục 5.1 của đặc tả). */
 @Injectable()
 export class CompaniesAdminService {
-  constructor(@InjectRepository(Company) private readonly companies: Repository<Company>) {}
+  constructor(
+    @InjectRepository(Company) private readonly companies: Repository<Company>,
+    private readonly revalidate: RevalidateService,
+  ) {}
 
   /** Mới đăng ký lên trước. `q` tìm trên tên cả hai ngôn ngữ, gõ không dấu được. */
   async list(query: AdminCompaniesQuery): Promise<Paginated<AdminCompany>> {
@@ -49,6 +54,8 @@ export class CompaniesAdminService {
         rejectReason: null,
         approvedAt: new Date(),
       });
+      // Công ty và các tin đã đăng của công ty vừa trở thành công khai.
+      this.revalidate.notify(companyTags(id));
     }
     return toAdminCompany(await this.findById(id));
   }
@@ -58,12 +65,14 @@ export class CompaniesAdminService {
    * thôi công khai vì isJobPublic đòi công ty APPROVED.
    */
   async reject(id: string, reason: string): Promise<AdminCompany> {
-    await this.findById(id);
+    const before = await this.findById(id);
     await this.companies.update(id, {
       status: CompanyStatus.REJECTED,
       rejectReason: reason,
       approvedAt: null,
     });
+    // Thu hồi duyệt: trang công ty và mọi tin của công ty phải biến khỏi web ngay.
+    if (before.status === CompanyStatus.APPROVED) this.revalidate.notify(companyTags(id));
     return toAdminCompany(await this.findById(id));
   }
 

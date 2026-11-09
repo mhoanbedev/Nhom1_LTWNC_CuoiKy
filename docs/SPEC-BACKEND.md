@@ -689,9 +689,9 @@ Mọi thay đổi dữ liệu công khai đều làm backend gọi `POST REVALID
 | Đăng, sửa, đóng, mở lại tin | `job:{id}`, `jobs:list`, `company:{companyId}`, `sitemap` |
 | Admin ẩn hoặc bỏ ẩn tin | Giống dòng trên |
 | Cron đóng tin hết hạn | `job:{id}` cho từng tin, `jobs:list`, `sitemap` |
-| Sửa trang công ty, admin duyệt công ty | `company:{id}`, `jobs:list`, `sitemap` |
+| Sửa trang công ty, đổi logo (công ty đã duyệt), admin duyệt hoặc thu hồi duyệt | `company:{id}`, `companies:list`, `jobs:list`, `sitemap` |
 
-Webhook gửi sau khi transaction đã commit, không chặn response, thử lại 3 lần; thất bại thì chỉ ghi log.
+Webhook gửi sau khi transaction đã commit, không chặn response, thử lại 3 lần (timeout 5 giây mỗi lần); thất bại thì chỉ ghi log. `REVALIDATE_URL` để trống thì không gọi (dev); `NODE_ENV=production` mà thiếu thì API không khởi động. Tên tag và header nằm trong `RevalidateTag`, `REVALIDATE_SECRET_HEADER` của `packages/shared`. Trang chi tiết tin gắn cả `job:{id}` lẫn `company:{companyId}`, để đổi tên hay logo công ty thì trang tin cũng được làm mới. Cron đóng tin chạy 0h05 mỗi ngày (giờ Việt Nam).
 
 ### Sitemap, hreflang, canonical
 

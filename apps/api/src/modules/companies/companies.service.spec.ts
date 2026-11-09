@@ -6,6 +6,7 @@ import {
   CloudinaryService,
   type UploadedImage,
 } from '../../infrastructure/cloudinary/cloudinary.service';
+import { RevalidateService } from '../../infrastructure/revalidate/revalidate.service';
 import { CompaniesService } from './companies.service';
 import { Company } from './entities/company.entity';
 
@@ -21,6 +22,7 @@ describe('CompaniesService.updateLogo', () => {
     uploadImage: jest.fn<Promise<UploadedImage>, [Buffer, object]>(),
     deleteImage: jest.fn<Promise<void>, [string]>(),
   };
+  const revalidate = { notify: jest.fn<void, [string[]]>() };
   let service: CompaniesService;
 
   beforeEach(async () => {
@@ -35,6 +37,7 @@ describe('CompaniesService.updateLogo', () => {
         { provide: getRepositoryToken(Company), useValue: companies },
         { provide: getDataSourceToken(), useValue: {} },
         { provide: CloudinaryService, useValue: cloudinary },
+        { provide: RevalidateService, useValue: revalidate },
       ],
     }).compile();
     service = moduleRef.get(CompaniesService);
@@ -77,5 +80,29 @@ describe('CompaniesService.updateLogo', () => {
       .catch((e: unknown) => e);
     expect((error as AppException).code).toBe(ErrorCode.FILE_INVALID_TYPE);
     expect(cloudinary.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('công ty đã duyệt đổi logo thì báo Next làm mới trang công ty; chưa duyệt thì không', async () => {
+    companies.findOneBy.mockResolvedValue({
+      id: 'c1',
+      status: 'APPROVED',
+      logoPublicId: null,
+    } as Company);
+    await service.updateLogo('hr-1', png);
+    expect(revalidate.notify).toHaveBeenCalledWith([
+      'company:c1',
+      'companies:list',
+      'jobs:list',
+      'sitemap',
+    ]);
+
+    revalidate.notify.mockClear();
+    companies.findOneBy.mockResolvedValue({
+      id: 'c2',
+      status: 'PENDING',
+      logoPublicId: null,
+    } as Company);
+    await service.updateLogo('hr-2', png);
+    expect(revalidate.notify).not.toHaveBeenCalled();
   });
 });
