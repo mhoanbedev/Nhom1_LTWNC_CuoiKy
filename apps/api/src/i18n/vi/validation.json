@@ -7,5 +7,8 @@
   "DUPLICATE_SKILL": "Mỗi kỹ năng chỉ chọn một lần",
   "JOB_VI_REQUIRED": "Tin cần có bản tiếng Việt",
   "JOB_EXPIRES_AT_IN_FUTURE": "Hạn nhận hồ sơ phải sau thời điểm hiện tại",
-  "JOB_SKILL_REQUIRED": "Tin cần có ít nhất một kỹ năng"
+  "JOB_SKILL_REQUIRED": "Tin cần có ít nhất một kỹ năng",
+  "END_BEFORE_START": "Thời gian kết thúc không được trước thời gian bắt đầu",
+  "PHONE_INVALID": "Số điện thoại không hợp lệ (vd 0912345678 hoặc +84912345678)",
+  "DATE_IN_PAST": "Ngày phải trước hôm nay"
 }

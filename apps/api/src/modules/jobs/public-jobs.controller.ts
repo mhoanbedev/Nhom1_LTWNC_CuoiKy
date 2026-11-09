@@ -1,5 +1,5 @@
 import { Controller, Get, HttpStatus, Param, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   LOCALES,
   type Locale,
@@ -8,6 +8,7 @@ import {
   type PublicJobListItem,
 } from '@ltwnc/shared';
 import { Lang } from '../../common/decorators/lang.decorator';
+import { OptionalAuth, ViewerUser } from '../../common/decorators/optional-auth.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import {
   ApiDataResponse,
@@ -20,6 +21,7 @@ import {
   PublicJobListItemDto,
   PublicJobsQueryDto,
 } from '../../common/swagger/public.dto';
+import type { RequestUser } from '../../common/types/request-user';
 import { CompaniesPublicService } from '../companies/companies-public.service';
 import { PublicJobsService } from './public-jobs.service';
 
@@ -49,15 +51,21 @@ export class PublicJobsController {
   }
 
   @Get('jobs/:slug')
+  @OptionalAuth()
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Chi tiết tin công khai',
     description:
-      'Tìm theo shortId ở cuối slug. Tin đã đóng hoặc hết hạn: 200 với `seo.indexable: false`, `isAcceptingApplications: false`. Nháp, bị ẩn, công ty chưa duyệt, hoặc không có bản theo `lang`: 404. Slug trên URL khác `canonicalSlug` thì frontend redirect 308.',
+      'Tìm theo shortId ở cuối slug. Tin đã đóng hoặc hết hạn: 200 với `seo.indexable: false`, `isAcceptingApplications: false`. Nháp, bị ẩn, công ty chưa duyệt, hoặc không có bản theo `lang`: 404. Slug trên URL khác `canonicalSlug` thì frontend redirect 308. Token không bắt buộc: ứng viên gửi kèm token thì có thêm `isSaved`.',
   })
   @ApiDataResponse(PublicJobDetailDto)
   @ApiErrorResponses(HttpStatus.NOT_FOUND)
-  detail(@Param('slug') slug: string, @Lang() lang: Locale): Promise<PublicJobDetail> {
-    return this.publicJobsService.detail(slug, lang);
+  detail(
+    @Param('slug') slug: string,
+    @Lang() lang: Locale,
+    @ViewerUser() viewer: RequestUser | undefined,
+  ): Promise<PublicJobDetail> {
+    return this.publicJobsService.detail(slug, lang, viewer);
   }
 
   @Get('companies/:slug/jobs')

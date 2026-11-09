@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ErrorCode, Role, type Locale, type UserRole } from '@ltwnc/shared';
+import { ErrorCode, Role, type AvatarResult, type Locale, type UserRole } from '@ltwnc/shared';
 import { EntityManager, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { assertImageFile, type UploadedFileLike } from '../../common/files/image-file';
+import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service';
 import { isUniqueViolation } from '../../database/pg-errors';
 import { User } from './entities/user.entity';
 
@@ -20,10 +22,38 @@ export interface UpdateProfileData {
   preferredLocale?: Locale;
 }
 
+/** Avatar hiển thị nhỏ (đầu trang, thẻ ứng viên): 256 px là đủ. */
+const AVATAR_MAX_SIZE = 256;
+
 /** Module users là nơi duy nhất ghi bảng `users`; module khác gọi qua service này. */
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private readonly users: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private readonly users: Repository<User>,
+    private readonly cloudinary: CloudinaryService,
+  ) {}
+
+  /**
+   * Đổi avatar (mọi vai trò): JPG/PNG/WebP tối đa 2 MB, thu nhỏ còn 256 px, lưu rồi mới xóa ảnh cũ
+   * trên Cloudinary; lưu DB lỗi thì dọn ảnh vừa upload.
+   */
+  async updateAvatar(id: string, file: UploadedFileLike | undefined): Promise<AvatarResult> {
+    assertImageFile(file);
+    const user = await this.users.findOneBy({ id });
+    if (!user) throw new AppException(ErrorCode.NOT_FOUND);
+    const uploaded = await this.cloudinary.uploadImage(file.buffer, {
+      folder: 'avatars',
+      maxSize: AVATAR_MAX_SIZE,
+    });
+    try {
+      await this.users.update(id, { avatarUrl: uploaded.url, avatarPublicId: uploaded.publicId });
+    } catch (error) {
+      await this.cloudinary.deleteImage(uploaded.publicId);
+      throw error;
+    }
+    if (user.avatarPublicId) await this.cloudinary.deleteImage(user.avatarPublicId);
+    return { avatarUrl: uploaded.url };
+  }
 
   findById(id: string): Promise<User | null> {
     return this.users.findOneBy({ id });

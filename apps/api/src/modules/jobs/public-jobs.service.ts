@@ -6,6 +6,7 @@ import {
   isJobPublic,
   JobStatus,
   normalizeSearchText,
+  Role,
   type CompanyJobsQuery,
   type Locale,
   type Paginated,
@@ -17,7 +18,9 @@ import { In, Repository, type SelectQueryBuilder } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { containsPattern } from '../../common/utils/search';
+import type { RequestUser } from '../../common/types/request-user';
 import { Job } from './entities/job.entity';
+import { SavedJob } from './entities/saved-job.entity';
 import { toPublicJobDetail, toPublicJobListItem } from './public-job.mapper';
 
 const SHORT_ID_PATTERN = /^[a-z0-9]{6}$/;
@@ -30,12 +33,32 @@ export function shortIdFromSlug(slug: string): string | null {
   return SHORT_ID_PATTERN.test(last) ? last : null;
 }
 
-const DETAIL_RELATIONS = {
+/** Quan hệ cần để dựng tin công khai (danh sách, chi tiết, tin đã lưu). */
+export const PUBLIC_JOB_RELATIONS = {
   translations: true,
   skills: { skill: true },
   company: { translations: true },
   location: true,
 } as const;
+const DETAIL_RELATIONS = PUBLIC_JOB_RELATIONS;
+
+/** Tin còn trang công khai (200): không phải nháp, không bị ẩn, công ty đã duyệt. */
+export function isViewable(job: Job): boolean {
+  return (
+    job.status !== JobStatus.DRAFT &&
+    !job.isHidden &&
+    job.company?.status === CompanyStatus.APPROVED
+  );
+}
+
+/** Tin đang nhận đơn: công khai đủ 4 điều kiện (isJobPublic), gồm còn hạn. */
+export function isOpen(job: Job, now = new Date()): boolean {
+  return (
+    !!job.company &&
+    job.expiresAt !== null &&
+    isJobPublic({ ...job, expiresAt: job.expiresAt }, job.company, now)
+  );
+}
 
 /**
  * Tin công khai (mục 5.2 của đặc tả): PUBLISHED, không bị ẩn, công ty APPROVED, còn hạn.
@@ -44,7 +67,10 @@ const DETAIL_RELATIONS = {
  */
 @Injectable()
 export class PublicJobsService {
-  constructor(@InjectRepository(Job) private readonly jobs: Repository<Job>) {}
+  constructor(
+    @InjectRepository(Job) private readonly jobs: Repository<Job>,
+    @InjectRepository(SavedJob) private readonly savedJobs: Repository<SavedJob>,
+  ) {}
 
   async list(query: PublicJobsQuery, lang: Locale): Promise<Paginated<PublicJobListItem>> {
     const builder = this.publicJobs(lang);
@@ -97,25 +123,19 @@ export class PublicJobsService {
    * công khai → 200, indexable; đã đóng hay hết hạn (không ẩn) → 200, noindex, không nhận đơn;
    * nháp, bị ẩn, công ty chưa duyệt, hoặc không có bản theo `lang` → 404.
    */
-  async detail(slug: string, lang: Locale): Promise<PublicJobDetail> {
+  async detail(slug: string, lang: Locale, viewer?: RequestUser): Promise<PublicJobDetail> {
     const shortId = shortIdFromSlug(slug);
     if (!shortId) throw new AppException(ErrorCode.NOT_FOUND);
     const job = await this.jobs.findOne({ where: { shortId }, relations: DETAIL_RELATIONS });
-    const company = job?.company;
-    if (
-      !job ||
-      !company ||
-      job.status === JobStatus.DRAFT ||
-      job.isHidden ||
-      company.status !== CompanyStatus.APPROVED ||
-      !job.translations?.some((row) => row.locale === lang)
-    ) {
+    if (!job || !isViewable(job) || !job.translations?.some((row) => row.locale === lang)) {
       throw new AppException(ErrorCode.NOT_FOUND);
     }
-    const isPublic =
-      job.expiresAt !== null &&
-      isJobPublic({ ...job, expiresAt: job.expiresAt }, company, new Date());
-    return toPublicJobDetail(job, lang, { isPublic });
+    const detail = toPublicJobDetail(job, lang, { isPublic: isOpen(job) });
+    // Thông tin riêng của người xem chỉ thêm cho ứng viên đã đăng nhập.
+    if (viewer?.role === Role.CANDIDATE) {
+      detail.isSaved = await this.savedJobs.existsBy({ candidateId: viewer.id, jobId: job.id });
+    }
+    return detail;
   }
 
   /** Khung truy vấn tin công khai, kèm bản dịch theo `lang` (tl) và bản `vi` (tv) để tìm kiếm. */

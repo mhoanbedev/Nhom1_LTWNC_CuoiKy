@@ -48,6 +48,10 @@ const jobListItem = z.object({
 
 export class PublicJobListItemDto extends createZodDto(jobListItem) {}
 
+export class SavedJobItemDto extends createZodDto(
+  jobListItem.extend({ savedAt: z.iso.datetime(), isAcceptingApplications: z.boolean() }),
+) {}
+
 export class PublicJobDetailDto extends createZodDto(
   jobListItem.extend({
     canonicalSlug: z.string(),
@@ -65,6 +69,7 @@ export class PublicJobDetailDto extends createZodDto(
     company: companySummary.extend({ website: z.url().nullable() }),
     isAcceptingApplications: z.boolean(),
     seo: z.object({ indexable: z.boolean() }),
+    isSaved: z.boolean().optional().meta({ description: 'Chỉ có khi ứng viên gửi kèm token' }),
   }),
 ) {}
 

@@ -4,6 +4,7 @@ import { ErrorCode, Role } from '@ltwnc/shared';
 import { QueryFailedError } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { User } from './entities/user.entity';
+import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service';
 import { UsersService } from './users.service';
 
 const uniqueViolation = (constraint: string): QueryFailedError<Error> =>
@@ -29,7 +30,11 @@ describe('UsersService.createCandidate', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
-      providers: [UsersService, { provide: getRepositoryToken(User), useValue: repo }],
+      providers: [
+        UsersService,
+        { provide: getRepositoryToken(User), useValue: repo },
+        { provide: CloudinaryService, useValue: {} },
+      ],
     }).compile();
     service = moduleRef.get(UsersService);
   });

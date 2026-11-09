@@ -7,6 +7,7 @@ import {
   OAuthProvider,
   UserStatus,
   type AuthResponse,
+  type AvatarResult,
   type AuthUser,
   type ChangePasswordInput,
   type Locale,
@@ -17,6 +18,7 @@ import {
 } from '@ltwnc/shared';
 import { DataSource } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import type { UploadedFileLike } from '../../common/files/image-file';
 import { jwtConfig } from '../../config/jwt.config';
 import type { User } from '../users/entities/user.entity';
 import { CompaniesService } from '../companies/companies.service';
@@ -146,6 +148,10 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
     if (!user) throw new AppException(ErrorCode.AUTH_TOKEN_INVALID);
     return toAuthUser(user);
+  }
+
+  updateAvatar(userId: string, file: UploadedFileLike | undefined): Promise<AvatarResult> {
+    return this.usersService.updateAvatar(userId, file);
   }
 
   async updateMe(userId: string, input: UpdateMeInput): Promise<AuthUser> {

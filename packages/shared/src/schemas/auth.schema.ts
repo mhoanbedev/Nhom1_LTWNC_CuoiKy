@@ -14,6 +14,9 @@ export const ValidationMessage = {
   JOB_VI_REQUIRED: 'JOB_VI_REQUIRED',
   JOB_EXPIRES_AT_IN_FUTURE: 'JOB_EXPIRES_AT_IN_FUTURE',
   JOB_SKILL_REQUIRED: 'JOB_SKILL_REQUIRED',
+  END_BEFORE_START: 'END_BEFORE_START',
+  PHONE_INVALID: 'PHONE_INVALID',
+  DATE_IN_PAST: 'DATE_IN_PAST',
 } as const;
 export type ValidationMessage = (typeof ValidationMessage)[keyof typeof ValidationMessage];
 

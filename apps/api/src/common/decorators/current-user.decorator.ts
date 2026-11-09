@@ -7,7 +7,7 @@ import type { RequestUser } from '../types/request-user';
 /**
  * Lấy user đã đăng nhập (gắn bởi JwtStrategy).
  * Dùng trên route có @Public thì user chưa đăng nhập sẽ nhận 401, nên route công khai
- * cần user tùy chọn phải dùng OptionalJwtGuard và đọc `req.user` trực tiếp.
+ * cần user tùy chọn phải gắn @OptionalAuth() và đọc user bằng @ViewerUser().
  *
  * @example me(@CurrentUser() user: RequestUser)
  */

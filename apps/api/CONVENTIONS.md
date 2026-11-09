@@ -162,6 +162,12 @@ modules/applications/
 **Bắt buộc:**
 
 - Mỗi bước trong mục 12 của đặc tả làm trên một nhánh `feat/api-<bước>`; mỗi việc nhỏ một commit; `make check` xanh rồi mới commit.
-- **Push, mở pull request, merge chỉ làm khi Hoàn đã tự test và nhắn đồng ý**, mỗi việc hỏi riêng một lần. Xong một dòng thì commit trên máy, báo cách test (Swagger, pgAdmin), rồi đợi.
+- **Mỗi dòng checklist đi đúng thứ tự, không gộp, không làm trước:**
+  1. Gửi plan cụ thể của dòng đó (làm gì, endpoint, quy tắc, điểm cần chốt) và đợi Hoàn duyệt.
+  2. Code theo plan đã duyệt, chạy `make check` và e2e.
+  3. Báo cách test (Swagger, pgAdmin) và **để nguyên chưa commit**.
+  4. Chỉ commit khi Hoàn đã test xong và nhắn "commit".
+  5. Sau đó mới gửi plan dòng tiếp theo.
+- **Push, mở pull request, merge chỉ làm khi Hoàn nhắn**, mỗi việc hỏi riêng một lần.
 - Commit theo Conventional Commits, scope `api` hoặc `shared`, mô tả tiếng Việt: `feat(api): đăng ký ứng viên`, `fix(shared): ...`, `docs(api): ...`, `test(api): ...`, `chore(api): ...`.
 - Xong bước (và Hoàn đồng ý) thì mở pull request vào `main`, merge bằng **merge commit** (không squash) để giữ lịch sử commit làm minh chứng đóng góp.

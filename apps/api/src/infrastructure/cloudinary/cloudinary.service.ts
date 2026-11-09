@@ -83,6 +83,22 @@ export class CloudinaryService {
     return { publicId: result.public_id, bytes: result.bytes };
   }
 
+  /**
+   * Xóa file riêng tư (dọn file vừa upload khi lưu DB lỗi). Lỗi chỉ ghi log, không ném.
+   * CV đã lưu thì không xóa: xóa CV chỉ là xóa mềm, đơn đã nộp vẫn cần file (mục 5.5).
+   */
+  async deletePrivateFile(publicId: string): Promise<void> {
+    try {
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: 'raw',
+        type: 'authenticated',
+        invalidate: true,
+      });
+    } catch (error) {
+      this.logger.warn(`Không xóa được file riêng tư ${publicId}: ${describe(error)}`);
+    }
+  }
+
   /** Link tải file riêng tư, hết hạn sau `ttlSeconds`. Ký bằng API secret, không gọi mạng. */
   privateDownloadUrl(publicId: string, ttlSeconds: number): SignedDownload {
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);

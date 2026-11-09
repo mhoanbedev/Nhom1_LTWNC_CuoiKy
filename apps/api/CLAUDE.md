@@ -35,4 +35,4 @@
 
 Commit: Conventional Commits, scope `api` hoặc `shared`, mô tả tiếng Việt, mỗi commit một việc.
 
-**Không tự push, mở PR hay merge.** Commit trên máy, báo Hoàn cách test, đợi Hoàn test xong và nhắn đồng ý cho từng việc.
+**Mỗi dòng việc:** gửi plan cụ thể → đợi Hoàn duyệt → code và chạy kiểm tra → báo cách test, **chưa commit** → Hoàn test xong nhắn "commit" mới commit → rồi mới sang plan dòng tiếp theo. **Không tự commit, push, mở PR hay merge**; mỗi việc đợi Hoàn nhắn.
