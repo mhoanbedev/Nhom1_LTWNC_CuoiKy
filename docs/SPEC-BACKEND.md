@@ -718,9 +718,9 @@ Mock repository bằng `getRepositoryToken(Entity)` trong `Test.createTestingMod
 
 Docker chỉ lo database khi dev; API chạy trực tiếp trên máy bằng `make dev` để có hot reload.
 
-- **postgres:** image `postgres:16-alpine`, cổng 5434 trên máy (biến `POSTGRES_PORT`, vì 5432 thường bị PostgreSQL cài sẵn chiếm) chỉ bind 127.0.0.1, volume `pgdata` để dữ liệu không mất khi tắt container, healthcheck bằng `pg_isready`.
-- Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, host `localhost`, cổng `5434`, user/mật khẩu/database theo `.env`. `make db-info` in sẵn các thông số này.
-- API trên máy kết nối qua `DATABASE_URL=postgresql://<user>:<pass>@localhost:5434/<db>`.
+- **postgres:** image `postgres:16-alpine`, cổng 5435 trên máy (biến `POSTGRES_PORT`, vì 5432–5434 đã có Postgres khác trên máy dùng) chỉ bind 127.0.0.1, volume `pgdata` để dữ liệu không mất khi tắt container, healthcheck bằng `pg_isready`.
+- Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, host `localhost`, cổng `5435`, user/mật khẩu/database theo `.env`. `make db-info` in sẵn các thông số này.
+- API trên máy kết nối qua `DATABASE_URL=postgresql://<user>:<pass>@localhost:5435/<db>`.
 - Extension `pg_trgm` và `unaccent` tạo trong migration đầu tiên bằng `CREATE EXTENSION IF NOT EXISTS`, để local và Render giống nhau.
 
 ### Makefile

@@ -37,9 +37,9 @@ Gõ `make` để xem đầy đủ.
 | Thành phần | Địa chỉ |
 | --- | --- |
 | API | `http://localhost:4000/api/v1` |
-| PostgreSQL (Docker) | `localhost:5434` (5432 thường bị PostgreSQL cài sẵn chiếm) |
+| PostgreSQL (Docker) | `localhost:5435` (5432–5434 đã có Postgres khác trên máy dùng) |
 
-Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5434`, user/mật khẩu/database `ltwnc`).
+Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).
 
 ## Biến môi trường
 

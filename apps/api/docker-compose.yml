@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ltwnc}
     ports:
       # Chỉ bind 127.0.0.1 để máy khác trong mạng không truy cập được.
-      - '127.0.0.1:${POSTGRES_PORT:-5434}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5435}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

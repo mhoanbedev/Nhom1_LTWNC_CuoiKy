@@ -18,7 +18,7 @@ const get = (key, fallback) => env[key] || fallback;
 
 console.log('Kết nối PostgreSQL (Docker) từ pgAdmin trên máy: Register > Server > tab Connection');
 console.log(`  Host:     localhost`);
-console.log(`  Port:     ${get('POSTGRES_PORT', '5434')}`);
+console.log(`  Port:     ${get('POSTGRES_PORT', '5435')}`);
 console.log(`  Database: ${get('POSTGRES_DB', 'ltwnc')}`);
 console.log(`  Username: ${get('POSTGRES_USER', 'ltwnc')}`);
 console.log(`  Password: ${get('POSTGRES_PASSWORD', 'ltwnc')}`);
