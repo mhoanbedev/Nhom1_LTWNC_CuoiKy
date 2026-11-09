@@ -5,10 +5,12 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { jwtConfig } from '../../config/jwt.config';
 import { UsersModule } from '../users/users.module';
+import { AccountsService } from './accounts.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Account } from './entities/account.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { GoogleIdTokenVerifier } from './google/google-id-token.verifier';
 import { PasswordService } from './password.service';
 import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task';
 import { RefreshTokenService } from './refresh-token.service';
@@ -30,6 +32,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccountsService,
+    GoogleIdTokenVerifier,
     PasswordService,
     RefreshTokenService,
     RefreshTokenCleanupTask,

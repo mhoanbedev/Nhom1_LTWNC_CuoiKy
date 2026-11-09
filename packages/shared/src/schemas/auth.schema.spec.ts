@@ -1,5 +1,6 @@
 import {
   changePasswordSchema,
+  googleLoginSchema,
   loginSchema,
   passwordSchema,
   registerCandidateSchema,
@@ -97,5 +98,13 @@ describe('registerCandidateSchema', () => {
 describe('loginSchema', () => {
   it('không áp luật độ mạnh mật khẩu khi đăng nhập', () => {
     expect(loginSchema.safeParse({ email: 'a@b.vn', password: 'x' }).success).toBe(true);
+  });
+});
+
+describe('googleLoginSchema', () => {
+  it('bắt buộc idToken không rỗng', () => {
+    expect(googleLoginSchema.safeParse({ idToken: 'abc' }).success).toBe(true);
+    expect(googleLoginSchema.safeParse({ idToken: '' }).success).toBe(false);
+    expect(googleLoginSchema.safeParse({}).success).toBe(false);
   });
 });

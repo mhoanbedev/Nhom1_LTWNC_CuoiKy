@@ -6,6 +6,7 @@ const testEnv: Record<string, string> = {
   DATABASE_URL: 'postgresql://ltwnc:ltwnc@localhost:5435/ltwnc',
   JWT_ACCESS_SECRET: 'test-only-secret-khong-dung-cho-production-0123456789',
   JWT_ACCESS_EXPIRES_IN: '15m',
+  GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
 };
 
 for (const [key, value] of Object.entries(testEnv)) {

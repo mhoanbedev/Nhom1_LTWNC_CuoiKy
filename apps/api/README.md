@@ -60,3 +60,4 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `JWT_ACCESS_EXPIRES_IN` | Thời hạn access token, vd `15m` |
 | `REFRESH_TOKEN_EXPIRES_IN` | Thời hạn refresh token, vd `7d` |
 | `REFRESH_TOKEN_GRACE_SECONDS` | Khoảng ân hạn khi xoay refresh token (giây), mặc định 30 |
+| `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |

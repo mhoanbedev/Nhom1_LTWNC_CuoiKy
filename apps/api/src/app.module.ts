@@ -14,6 +14,7 @@ import { localeMiddleware } from './common/middleware/locale.middleware';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { appConfig } from './config/app.config';
+import { googleConfig } from './config/google.config';
 import { databaseConfig } from './config/database.config';
 import { jwtConfig } from './config/jwt.config';
 import { validateEnv } from './config/env.schema';
@@ -30,7 +31,7 @@ import { UsersModule } from './modules/users/users.module';
       // Chạy từ apps/api nên đọc apps/api/.env; trên Render không có file, env lấy từ dashboard.
       envFilePath: '.env',
       validate: validateEnv,
-      load: [appConfig, databaseConfig, jwtConfig],
+      load: [appConfig, databaseConfig, jwtConfig, googleConfig],
     }),
     I18nModule.forRoot({
       fallbackLanguage: DEFAULT_LOCALE,

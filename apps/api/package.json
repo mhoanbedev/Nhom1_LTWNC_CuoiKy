@@ -36,6 +36,7 @@
     "@nestjs/swagger": "^11.4.8",
     "@nestjs/typeorm": "^11.0.3",
     "argon2": "^0.45.2",
+    "google-auth-library": "^11.3.3",
     "nestjs-i18n": "^10.8.5",
     "nestjs-zod": "^5.6.0",
     "passport": "^0.7.0",

@@ -278,6 +278,7 @@ NestJS cấp JWT; Auth.js giữ token đó trong session của nó. Mọi reques
    - Đã có Account (google, sub): đăng nhập user đó.
    - Chưa có Account nhưng email đã xác minh trùng với một user có sẵn: liên kết vào user đó.
    - Chưa có gì: tạo user mới với role CANDIDATE.
+   - Email Google chưa xác minh (và chưa có Account): trả 400 `AUTH_GOOGLE_EMAIL_UNVERIFIED`, không liên kết, không tạo user.
 4. Trả về cùng format với `/auth/login`.
 
 Recruiter chỉ đăng ký được qua form, vì cần nhập thông tin công ty. Sau đó có thể đăng nhập bằng Google nhờ liên kết theo email. Hệ thống chỉ có đúng 1 admin, tạo qua seed; không có API nào tạo admin hay đổi role của user thành ADMIN.
@@ -301,7 +302,7 @@ Recruiter chỉ đăng ký được qua form, vì cần nhập thông tin công 
 - Đăng ký: `POST /auth/register/candidate` và `POST /auth/register/recruiter` (kèm thông tin công ty). Email trùng trả 409 `AUTH_EMAIL_TAKEN`.
 - Mật khẩu tối thiểu 8 ký tự, có cả chữ và số, băm bằng argon2id.
 - Giới hạn tần suất cho `/auth/login`, `/auth/register/*` và `/auth/refresh`, vượt thì trả 429.
-- Mã lỗi: 401 `AUTH_INVALID_CREDENTIALS`, 401 `AUTH_TOKEN_INVALID`, 401 `AUTH_REFRESH_INVALID`, 401 `AUTH_REFRESH_REUSED`, 403 `AUTH_ACCOUNT_LOCKED`.
+- Mã lỗi: 400 `AUTH_GOOGLE_EMAIL_UNVERIFIED`, 401 `AUTH_INVALID_CREDENTIALS`, 401 `AUTH_TOKEN_INVALID`, 401 `AUTH_REFRESH_INVALID`, 401 `AUTH_REFRESH_REUSED`, 401 `AUTH_GOOGLE_TOKEN_INVALID`, 403 `AUTH_ACCOUNT_LOCKED`.
 
 ## 7. Danh sách API
 
@@ -530,10 +531,12 @@ Lỗi validate trả `details: [{ field, message }]`.
 | APPLICATION\_INVALID\_TRANSITION | 400 | Chuyển trạng thái đơn sai bảng 5.4 |
 | CANNOT\_LOCK\_SELF | 400 | Admin tự khóa tài khoản của chính mình |
 | AUTH\_PASSWORD\_INCORRECT | 400 | Đổi mật khẩu mà nhập sai mật khẩu hiện tại |
+| AUTH\_GOOGLE\_EMAIL\_UNVERIFIED | 400 | Đăng nhập Google bằng email chưa xác minh (không liên kết, không tạo user) |
 | AUTH\_INVALID\_CREDENTIALS | 401 | Sai email hoặc mật khẩu |
 | AUTH\_TOKEN\_INVALID | 401 | Thiếu token, token sai hoặc hết hạn |
 | AUTH\_REFRESH\_INVALID | 401 | Refresh token sai hoặc hết hạn |
 | AUTH\_REFRESH\_REUSED | 401 | Refresh token đã thu hồi bị dùng lại; cả family bị thu hồi |
+| AUTH\_GOOGLE\_TOKEN\_INVALID | 401 | `id_token` Google sai chữ ký, hết hạn hoặc sai audience |
 | AUTH\_ACCOUNT\_LOCKED | 403 | Tài khoản bị khóa |
 | FORBIDDEN | 403 | Sai vai trò hoặc không sở hữu tài nguyên |
 | COMPANY\_NOT\_APPROVED | 403 | Công ty chưa duyệt mà tạo/đăng tin |
@@ -849,7 +852,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `feat(api): đăng ký ứng viên, đăng nhập, JwtAuthGuard, RolesGuard`
 - [ ] `feat(api): refresh token xoay vòng, đăng xuất`
 - [ ] `feat(api): /auth/me và đổi mật khẩu`
-- [ ] `feat(api): đăng nhập Google`: tạo OAuth client Google ở bước này
+- [x] `feat(api): đăng nhập Google`: tạo OAuth client Google ở bước này
 - [ ] `feat(api): danh mục /meta, seed admin, kỹ năng, tỉnh/thành`
 - [ ] `feat(api): giới hạn tần suất cho auth`
 

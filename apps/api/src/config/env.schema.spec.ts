@@ -6,6 +6,7 @@ const validEnv = {
   FRONTEND_URL: 'http://localhost:3000',
   DATABASE_URL: 'postgresql://ltwnc:ltwnc@localhost:5435/ltwnc',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
+  GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
 };
 
 describe('validateEnv', () => {

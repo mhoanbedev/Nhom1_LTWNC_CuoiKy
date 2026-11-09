@@ -44,6 +44,12 @@ export const refreshTokenSchema = z.object({
 });
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 
+/** `id_token` Google mà Auth.js nhận được (`account.id_token`). Backend tự verify, không tin email client gửi. */
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1).max(4096),
+});
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
+
 /** PATCH /auth/me: đổi tên hoặc ngôn ngữ ưa thích (khi người dùng chuyển ngôn ngữ trên giao diện). */
 export const updateMeSchema = z
   .object({

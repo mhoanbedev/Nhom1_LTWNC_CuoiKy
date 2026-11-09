@@ -9,8 +9,10 @@ import { User } from './entities/user.entity';
 export interface CreateCandidateData {
   email: string;
   name: string;
-  passwordHash: string;
+  /** Null khi tạo từ đăng nhập Google: chỉ đăng nhập được bằng Google cho tới khi đặt mật khẩu. */
+  passwordHash: string | null;
   preferredLocale: Locale;
+  avatarUrl?: string | null;
 }
 
 export interface UpdateProfileData {
@@ -43,6 +45,11 @@ export class UsersService {
       .addSelect('user.passwordHash')
       .where('user.id = :id', { id })
       .getOne();
+  }
+
+  /** `email` phải đã chuẩn hoá chữ thường. */
+  findByEmail(email: string): Promise<User | null> {
+    return this.users.findOneBy({ email });
   }
 
   existsByEmail(email: string): Promise<boolean> {

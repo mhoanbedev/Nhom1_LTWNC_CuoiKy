@@ -12,6 +12,7 @@ import {
   AuthResponseDto,
   AuthUserDto,
   ChangePasswordDto,
+  GoogleLoginDto,
   LoginDto,
   RefreshTokenDto,
   RegisterCandidateDto,
@@ -44,6 +45,29 @@ export class AuthController {
   @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
   login(@Body() body: LoginDto, @ClientInfo() client: RequestClientInfo): Promise<AuthResponse> {
     return this.authService.login(body, client);
+  }
+
+  @Public()
+  @Post('oauth/google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Đăng nhập bằng Google (Auth.js gửi account.id_token)',
+    description:
+      'Đã liên kết thì đăng nhập; email Google đã xác minh trùng tài khoản có sẵn thì liên kết vào; chưa có thì tạo ứng viên mới. Response giống /auth/login.',
+  })
+  @ApiDataResponse(AuthResponseDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.SERVICE_UNAVAILABLE,
+  )
+  loginWithGoogle(
+    @Body() body: GoogleLoginDto,
+    @Lang() lang: Locale,
+    @ClientInfo() client: RequestClientInfo,
+  ): Promise<AuthResponse> {
+    return this.authService.loginWithGoogle(body.idToken, lang, client);
   }
 
   @Public()

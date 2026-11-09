@@ -19,6 +19,12 @@ export const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: duration('15m'),
   REFRESH_TOKEN_EXPIRES_IN: duration('7d'),
   REFRESH_TOKEN_GRACE_SECONDS: z.coerce.number().int().min(0).max(300).default(30),
+  GOOGLE_CLIENT_ID: z
+    .string()
+    .regex(
+      /\.apps\.googleusercontent\.com$/,
+      'Client ID của OAuth client Google (…apps.googleusercontent.com)',
+    ),
 });
 
 export type Env = z.infer<typeof envSchema>;

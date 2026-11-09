@@ -3,6 +3,7 @@ import type { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
   ErrorCode,
+  OAuthProvider,
   UserStatus,
   type AuthResponse,
   type AuthUser,
@@ -17,6 +18,8 @@ import { jwtConfig } from '../../config/jwt.config';
 import type { User } from '../users/entities/user.entity';
 import { toAuthUser } from '../users/user.mapper';
 import { UsersService } from '../users/users.service';
+import { AccountsService } from './accounts.service';
+import { GoogleIdTokenVerifier, type GoogleIdentity } from './google/google-id-token.verifier';
 import type { JwtPayload } from './jwt-payload';
 import { PasswordService } from './password.service';
 import {
@@ -32,6 +35,8 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly jwtService: JwtService,
+    private readonly accountsService: AccountsService,
+    private readonly googleVerifier: GoogleIdTokenVerifier,
     @Inject(jwtConfig.KEY) private readonly config: ConfigType<typeof jwtConfig>,
   ) {}
 
@@ -68,6 +73,22 @@ export class AuthService {
     if (!valid) throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     if (user.status === UserStatus.LOCKED) throw new AppException(ErrorCode.AUTH_ACCOUNT_LOCKED);
 
+    return this.startSession(user, client);
+  }
+
+  /**
+   * Đăng nhập bằng `id_token` Google (Auth.js gọi sau khi Google trả về). Ba trường hợp:
+   * đã liên kết thì đăng nhập user đó; email đã xác minh trùng user có sẵn thì liên kết vào;
+   * chưa có gì thì tạo ứng viên mới, ngôn ngữ ưa thích theo ngôn ngữ của request.
+   */
+  async loginWithGoogle(
+    idToken: string,
+    locale: Locale,
+    client: ClientInfo,
+  ): Promise<AuthResponse> {
+    const identity = await this.googleVerifier.verify(idToken);
+    const user = await this.resolveGoogleUser(identity, locale);
+    if (user.status === UserStatus.LOCKED) throw new AppException(ErrorCode.AUTH_ACCOUNT_LOCKED);
     return this.startSession(user, client);
   }
 
@@ -129,6 +150,49 @@ export class AuthService {
   /** Đăng xuất mọi thiết bị. */
   logoutAll(userId: string): Promise<void> {
     return this.refreshTokenService.revokeAllForUser(userId);
+  }
+
+  private async resolveGoogleUser(identity: GoogleIdentity, locale: Locale): Promise<User> {
+    const linkedUserId = await this.accountsService.findUserId(OAuthProvider.GOOGLE, identity.sub);
+    if (linkedUserId) {
+      const linked = await this.usersService.findById(linkedUserId);
+      if (linked) return linked;
+    }
+
+    // Chỉ liên kết hoặc tạo theo email Google đã xác minh, để không ai chiếm được email người khác.
+    if (!identity.email || !identity.emailVerified) {
+      throw new AppException(ErrorCode.AUTH_GOOGLE_EMAIL_UNVERIFIED);
+    }
+    const user =
+      (await this.usersService.findByEmail(identity.email)) ??
+      (await this.createGoogleCandidate(identity, identity.email, locale));
+
+    // Tạo user rồi mới liên kết: nếu lỗi giữa hai bước, lần đăng nhập sau sẽ liên kết theo email.
+    await this.accountsService.link(user.id, OAuthProvider.GOOGLE, identity.sub);
+    return user;
+  }
+
+  private async createGoogleCandidate(
+    identity: GoogleIdentity,
+    email: string,
+    locale: Locale,
+  ): Promise<User> {
+    try {
+      return await this.usersService.createCandidate({
+        email,
+        name: (identity.name ?? email.split('@')[0] ?? email).slice(0, 100),
+        passwordHash: null,
+        preferredLocale: locale,
+        avatarUrl: identity.picture && identity.picture.length <= 500 ? identity.picture : null,
+      });
+    } catch (error) {
+      // Hai request đăng nhập Google cùng lúc: request kia vừa tạo user, dùng luôn user đó.
+      if (error instanceof AppException && error.code === ErrorCode.AUTH_EMAIL_TAKEN) {
+        const existing = await this.usersService.findByEmail(email);
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 
   private async startSession(user: User, client: ClientInfo): Promise<AuthResponse> {

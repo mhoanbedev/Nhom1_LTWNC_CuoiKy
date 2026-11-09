@@ -5,7 +5,9 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { jwtConfig } from '../../config/jwt.config';
 import type { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { AccountsService } from './accounts.service';
 import { AuthService } from './auth.service';
+import { GoogleIdTokenVerifier, type GoogleIdentity } from './google/google-id-token.verifier';
 import { PasswordService } from './password.service';
 import {
   RefreshTokenService,
@@ -52,6 +54,7 @@ describe('AuthService', () => {
     findByEmailWithPassword: jest.fn<Promise<User | null>, [string]>(),
     findById: jest.fn<Promise<User | null>, [string]>(),
     findByIdWithPassword: jest.fn<Promise<User | null>, [string]>(),
+    findByEmail: jest.fn<Promise<User | null>, [string]>(),
     updateProfile: jest.fn<Promise<User>, [string, object]>(),
     setPassword: jest.fn<Promise<User>, [string, string]>(),
   };
@@ -67,6 +70,11 @@ describe('AuthService', () => {
     revokeAllForUser: jest.fn<Promise<void>, [string]>(),
   };
   const jwtService = { signAsync: jest.fn<Promise<string>, [object]>() };
+  const accountsService = {
+    findUserId: jest.fn<Promise<string | null>, [string, string]>(),
+    link: jest.fn<Promise<void>, [string, string, string]>(),
+  };
+  const googleVerifier = { verify: jest.fn<Promise<GoogleIdentity>, [string]>() };
   let service: AuthService;
 
   beforeEach(async () => {
@@ -80,6 +88,8 @@ describe('AuthService', () => {
         { provide: PasswordService, useValue: passwordService },
         { provide: RefreshTokenService, useValue: refreshTokenService },
         { provide: JwtService, useValue: jwtService },
+        { provide: AccountsService, useValue: accountsService },
+        { provide: GoogleIdTokenVerifier, useValue: googleVerifier },
         { provide: jwtConfig.KEY, useValue: { accessSecret: 'x', accessTtlSeconds: 900 } },
       ],
     }).compile();
@@ -176,6 +186,108 @@ describe('AuthService', () => {
       );
       passwordService.verify.mockResolvedValue(false);
       await expectAppError(service.login(input, client), ErrorCode.AUTH_INVALID_CREDENTIALS);
+    });
+  });
+
+  describe('loginWithGoogle', () => {
+    const identity: GoogleIdentity = {
+      sub: 'google-sub-1',
+      email: 'an@example.com',
+      emailVerified: true,
+      name: 'Nguyễn An',
+      picture: 'https://lh3.googleusercontent.com/a/anh',
+    };
+
+    beforeEach(() => {
+      googleVerifier.verify.mockResolvedValue(identity);
+    });
+
+    it('đã liên kết: đăng nhập đúng user đó, không liên kết lại', async () => {
+      accountsService.findUserId.mockResolvedValue('user-1');
+      usersService.findById.mockResolvedValue(makeUser());
+      await expect(service.loginWithGoogle('id-token', 'vi', client)).resolves.toMatchObject({
+        user: { id: 'user-1' },
+      });
+      expect(accountsService.findUserId).toHaveBeenCalledWith('google', 'google-sub-1');
+      expect(accountsService.link).not.toHaveBeenCalled();
+      expect(usersService.createCandidate).not.toHaveBeenCalled();
+    });
+
+    it('chưa liên kết, email đã xác minh trùng user có sẵn: liên kết vào user đó', async () => {
+      accountsService.findUserId.mockResolvedValue(null);
+      usersService.findByEmail.mockResolvedValue(makeUser({ role: Role.RECRUITER }));
+      const result = await service.loginWithGoogle('id-token', 'vi', client);
+      expect(result.user).toMatchObject({ id: 'user-1', role: Role.RECRUITER });
+      expect(accountsService.link).toHaveBeenCalledWith('user-1', 'google', 'google-sub-1');
+      expect(usersService.createCandidate).not.toHaveBeenCalled();
+    });
+
+    it('chưa có gì: tạo ứng viên không mật khẩu, ngôn ngữ theo request, rồi liên kết', async () => {
+      accountsService.findUserId.mockResolvedValue(null);
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.createCandidate.mockResolvedValue(
+        makeUser({ id: 'user-moi', passwordHash: null }),
+      );
+      await service.loginWithGoogle('id-token', 'en', client);
+      expect(usersService.createCandidate).toHaveBeenCalledWith({
+        email: 'an@example.com',
+        name: 'Nguyễn An',
+        passwordHash: null,
+        preferredLocale: 'en',
+        avatarUrl: identity.picture,
+      });
+      expect(accountsService.link).toHaveBeenCalledWith('user-moi', 'google', 'google-sub-1');
+    });
+
+    it('Google không trả tên thì lấy phần trước @ của email', async () => {
+      googleVerifier.verify.mockResolvedValue({ ...identity, name: null, picture: null });
+      accountsService.findUserId.mockResolvedValue(null);
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.createCandidate.mockResolvedValue(makeUser());
+      await service.loginWithGoogle('id-token', 'vi', client);
+      expect(usersService.createCandidate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'an', avatarUrl: null }),
+      );
+    });
+
+    it('hai request tạo cùng lúc: request thua dùng user request kia vừa tạo', async () => {
+      accountsService.findUserId.mockResolvedValue(null);
+      usersService.findByEmail.mockResolvedValueOnce(null).mockResolvedValueOnce(makeUser());
+      usersService.createCandidate.mockRejectedValue(new AppException(ErrorCode.AUTH_EMAIL_TAKEN));
+      await expect(service.loginWithGoogle('id-token', 'vi', client)).resolves.toMatchObject({
+        user: { id: 'user-1' },
+      });
+    });
+
+    it('email chưa xác minh thì không liên kết, không tạo user', async () => {
+      googleVerifier.verify.mockResolvedValue({ ...identity, emailVerified: false });
+      accountsService.findUserId.mockResolvedValue(null);
+      await expectAppError(
+        service.loginWithGoogle('id-token', 'vi', client),
+        ErrorCode.AUTH_GOOGLE_EMAIL_UNVERIFIED,
+      );
+      expect(usersService.findByEmail).not.toHaveBeenCalled();
+      expect(usersService.createCandidate).not.toHaveBeenCalled();
+    });
+
+    it('tài khoản bị khóa trả AUTH_ACCOUNT_LOCKED, không cấp phiên', async () => {
+      accountsService.findUserId.mockResolvedValue('user-1');
+      usersService.findById.mockResolvedValue(makeUser({ status: UserStatus.LOCKED }));
+      await expectAppError(
+        service.loginWithGoogle('id-token', 'vi', client),
+        ErrorCode.AUTH_ACCOUNT_LOCKED,
+      );
+      expect(refreshTokenService.issueForNewSession).not.toHaveBeenCalled();
+    });
+
+    it('id_token sai: lỗi từ bước verify được ném tiếp', async () => {
+      googleVerifier.verify.mockRejectedValue(
+        new AppException(ErrorCode.AUTH_GOOGLE_TOKEN_INVALID),
+      );
+      await expectAppError(
+        service.loginWithGoogle('sai', 'vi', client),
+        ErrorCode.AUTH_GOOGLE_TOKEN_INVALID,
+      );
     });
   });
 

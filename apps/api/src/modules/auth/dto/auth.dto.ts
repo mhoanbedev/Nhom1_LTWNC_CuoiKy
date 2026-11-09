@@ -1,5 +1,6 @@
 import {
   changePasswordSchema,
+  googleLoginSchema,
   LOCALES,
   loginSchema,
   refreshTokenSchema,
@@ -13,6 +14,8 @@ import { z } from 'zod';
 export class RegisterCandidateDto extends createZodDto(registerCandidateSchema) {}
 
 export class LoginDto extends createZodDto(loginSchema) {}
+
+export class GoogleLoginDto extends createZodDto(googleLoginSchema) {}
 
 export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}
 
