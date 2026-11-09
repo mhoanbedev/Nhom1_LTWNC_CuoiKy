@@ -34,3 +34,34 @@ export function ApiDataResponse<T>(
 export function ApiErrorResponses(...statuses: HttpStatus[]): MethodDecorator & ClassDecorator {
   return applyDecorators(...statuses.map((status) => ApiResponse({ status, type: ApiErrorDto })));
 }
+
+/**
+ * Mô tả response danh sách có phân trang: `{ data: <model>[], meta }`.
+ *
+ * @example @ApiPaginatedResponse(AdminCompanyDto)
+ */
+export function ApiPaginatedResponse<T>(model: Type<T>): MethodDecorator & ClassDecorator {
+  return applyDecorators(
+    ApiExtraModels(model),
+    ApiResponse({
+      status: HttpStatus.OK,
+      schema: {
+        type: 'object',
+        required: ['data', 'meta'],
+        properties: {
+          data: { type: 'array', items: { $ref: getSchemaPath(model) } },
+          meta: {
+            type: 'object',
+            required: ['page', 'limit', 'total', 'totalPages'],
+            properties: {
+              page: { type: 'integer', example: 1 },
+              limit: { type: 'integer', example: 20 },
+              total: { type: 'integer', example: 42 },
+              totalPages: { type: 'integer', example: 3 },
+            },
+          },
+        },
+      },
+    }),
+  );
+}

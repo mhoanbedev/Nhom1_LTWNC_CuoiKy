@@ -176,6 +176,7 @@ Các quy tắc dưới đây là "nghiệp vụ khó" của đề. Quy tắc nà
 - Khi còn PENDING: vẫn đăng nhập và sửa thông tin công ty được, nhưng tạo hay đăng tin trả 403 `COMPANY_NOT_APPROVED`.
 - Admin duyệt: công ty sang APPROVED, recruiter nhận thông báo `COMPANY_APPROVED`.
 - Admin từ chối: phải có lý do, công ty sang REJECTED. Recruiter sửa rồi gửi lại thì công ty về PENDING.
+- Duyệt công ty đã APPROVED thì giữ nguyên (idempotent). Từ chối công ty đã APPROVED là thu hồi duyệt: mọi tin của công ty thôi công khai.
 - Trang công ty công khai chỉ hiện khi APPROVED, còn lại trả 404.
 
 ### 5.2 Vòng đời tin tuyển
@@ -863,6 +864,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
 - [ ] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
 - [ ] `feat(shared): slugify và isJobPublic kèm test`
+- [ ] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
 - [ ] `feat(api): tin tuyển nháp của nhà tuyển dụng`
 - [ ] `feat(api): vòng đời tin đăng, đóng, mở lại`
 - [ ] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`

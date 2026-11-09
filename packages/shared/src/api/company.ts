@@ -32,3 +32,8 @@ export interface RecruiterCompany {
 export interface CompanyLogo {
   logoUrl: string;
 }
+
+/** Công ty trong màn quản trị: như của nhà tuyển dụng, kèm người sở hữu để admin liên hệ. */
+export interface AdminCompany extends RecruiterCompany {
+  owner: { id: string; email: string; name: string };
+}

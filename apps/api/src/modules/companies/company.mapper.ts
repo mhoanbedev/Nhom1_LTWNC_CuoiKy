@@ -1,4 +1,8 @@
-import type { CompanyTranslation as CompanyTranslationDto, RecruiterCompany } from '@ltwnc/shared';
+import type {
+  AdminCompany,
+  CompanyTranslation as CompanyTranslationDto,
+  RecruiterCompany,
+} from '@ltwnc/shared';
 import { ErrorCode } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import type { CompanyTranslation } from './entities/company-translation.entity';
@@ -29,5 +33,15 @@ export function toRecruiterCompany(company: Company): RecruiterCompany {
     translations: { vi: toTranslation(vi), en: en ? toTranslation(en) : null },
     createdAt: company.createdAt.toISOString(),
     updatedAt: company.updatedAt.toISOString(),
+  };
+}
+
+/** Entity (kèm `translations` và `owner`) → công ty trong màn quản trị. */
+export function toAdminCompany(company: Company): AdminCompany {
+  const owner = company.owner;
+  if (!owner) throw new AppException(ErrorCode.INTERNAL_ERROR);
+  return {
+    ...toRecruiterCompany(company),
+    owner: { id: owner.id, email: owner.email, name: owner.name },
   };
 }

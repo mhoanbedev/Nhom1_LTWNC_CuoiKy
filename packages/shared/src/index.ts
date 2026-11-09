@@ -7,5 +7,7 @@ export * from './api/meta';
 export * from './api/company';
 export * from './schemas/auth.schema';
 export * from './schemas/company.schema';
+export * from './schemas/pagination.schema';
+export * from './schemas/admin.schema';
 export * from './utils/text';
 export * from './domain/job-visibility';
