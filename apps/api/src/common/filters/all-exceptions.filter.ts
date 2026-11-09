@@ -10,7 +10,12 @@ import {
 import { DEFAULT_LOCALE, ErrorCode, type ApiError, type ApiErrorDetail } from '@ltwnc/shared';
 import type { Request, Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
-import { EntityNotFoundError, QueryFailedError } from 'typeorm';
+import { EntityNotFoundError } from 'typeorm';
+import {
+  PG_FOREIGN_KEY_VIOLATION,
+  PG_UNIQUE_VIOLATION,
+  pgErrorCode,
+} from '../../database/pg-errors';
 import {
   AppException,
   ValidationFailedException,
@@ -26,10 +31,6 @@ interface ResolvedError {
   details?: ApiErrorDetail[];
 }
 
-/** Mã lỗi Postgres: https://www.postgresql.org/docs/current/errcodes-appendix.html */
-const PG_UNIQUE_VIOLATION = '23505';
-const PG_FOREIGN_KEY_VIOLATION = '23503';
-
 /** Lỗi HTTP có sẵn của Nest (route không tồn tại, body JSON hỏng...) quy về mã lỗi của dự án. */
 const HTTP_STATUS_TO_CODE: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.BAD_REQUEST]: ErrorCode.BAD_REQUEST,
@@ -40,13 +41,6 @@ const HTTP_STATUS_TO_CODE: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.PAYLOAD_TOO_LARGE]: ErrorCode.FILE_TOO_LARGE,
   [HttpStatus.TOO_MANY_REQUESTS]: ErrorCode.TOO_MANY_REQUESTS,
 };
-
-function pgErrorCode({ driverError }: { driverError: unknown }): string | undefined {
-  if (typeof driverError === 'object' && driverError !== null && 'code' in driverError) {
-    return String(driverError.code);
-  }
-  return undefined;
-}
 
 /** Quy mọi loại exception về một mã lỗi của dự án. Export để unit test. */
 export function resolveError(exception: unknown): ResolvedError {
@@ -66,14 +60,12 @@ export function resolveError(exception: unknown): ResolvedError {
     return { code, status: HTTP_STATUS_TO_CODE[status] ? status : ERROR_HTTP_STATUS[code] };
   }
 
-  if (exception instanceof QueryFailedError) {
-    const pgCode = pgErrorCode(exception);
-    if (pgCode === PG_UNIQUE_VIOLATION) {
-      return { code: ErrorCode.CONFLICT, status: HttpStatus.CONFLICT };
-    }
-    if (pgCode === PG_FOREIGN_KEY_VIOLATION) {
-      return { code: ErrorCode.INVALID_REFERENCE, status: HttpStatus.BAD_REQUEST };
-    }
+  const pgCode = pgErrorCode(exception);
+  if (pgCode === PG_UNIQUE_VIOLATION) {
+    return { code: ErrorCode.CONFLICT, status: HttpStatus.CONFLICT };
+  }
+  if (pgCode === PG_FOREIGN_KEY_VIOLATION) {
+    return { code: ErrorCode.INVALID_REFERENCE, status: HttpStatus.BAD_REQUEST };
   }
 
   if (exception instanceof EntityNotFoundError) {
@@ -108,7 +100,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const localizedDetails =
       exception instanceof ValidationFailedException
-        ? zodIssuesToDetails(exception.zodError, locale)
+        ? zodIssuesToDetails(exception.zodError, locale, (key) =>
+            this.i18n.t(`validation.${key}`, { lang: locale }),
+          )
         : details;
 
     const body: ApiError = {

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { Lang } from '../src/common/decorators/lang.decorator';
+import { Public } from '../src/common/decorators/public.decorator';
 import { AppException } from '../src/common/exceptions/app.exception';
 
 class CreateThingDto extends createZodDto(
@@ -15,6 +16,7 @@ class CreateThingDto extends createZodDto(
 ) {}
 
 /** Controller chỉ dùng trong test, để kiểm tra các lớp dùng chung qua HTTP thật. */
+@Public()
 @Controller('__test')
 class TestController {
   @Get('ok')

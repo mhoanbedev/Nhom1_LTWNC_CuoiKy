@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { DURATION_PATTERN } from '../common/utils/duration';
+
+const duration = (fallback: string) =>
+  z.string().regex(DURATION_PATTERN, 'dạng <số><s|m|h|d>, vd 15m, 7d').default(fallback);
 
 /**
  * Biến môi trường của API. App chỉ khởi động khi env khớp schema này.
@@ -11,6 +15,8 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .regex(/^postgres(ql)?:\/\//, 'phải là chuỗi kết nối PostgreSQL (postgresql://...)'),
+  JWT_ACCESS_SECRET: z.string().min(32, 'tối thiểu 32 ký tự; `make env` tự sinh khi để trống'),
+  JWT_ACCESS_EXPIRES_IN: duration('15m'),
 });
 
 export type Env = z.infer<typeof envSchema>;

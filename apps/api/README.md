@@ -56,3 +56,5 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `NODE_ENV`, `PORT`, `FRONTEND_URL` | Môi trường, cổng API, domain frontend (CORS) |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` | Postgres trong Docker |
 | `DATABASE_URL` | Chuỗi kết nối app dùng |
+| `JWT_ACCESS_SECRET` | Khóa ký access token, tối thiểu 32 ký tự; để trống thì `make env` tự sinh cho dev |
+| `JWT_ACCESS_EXPIRES_IN` | Thời hạn access token, vd `15m` |
