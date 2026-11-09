@@ -119,3 +119,9 @@ export const recruiterJobsQuerySchema = paginationQuerySchema.extend({
   q: searchQuerySchema,
 });
 export type RecruiterJobsQuery = z.infer<typeof recruiterJobsQuerySchema>;
+
+/** `POST /recruiter/jobs/:id/reopen`: mở lại tin đã đóng bắt buộc đặt hạn mới (phải ở tương lai). */
+export const reopenJobSchema = z.object({
+  expiresAt: z.iso.datetime({ offset: true }),
+});
+export type ReopenJobInput = z.infer<typeof reopenJobSchema>;

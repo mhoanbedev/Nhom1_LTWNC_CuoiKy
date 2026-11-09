@@ -190,6 +190,10 @@ Các quy tắc dưới đây là "nghiệp vụ khó" của đề. Quy tắc nà
 
 Admin ẩn hoặc bỏ ẩn tin ở bất kỳ trạng thái nào, ẩn thì phải kèm lý do. Recruiter nhận thông báo `JOB_HIDDEN`.
 
+- Thiếu điều kiện đăng (bản `vi`, hạn ở tương lai, ít nhất 1 kỹ năng) thì 400 `JOB_INVALID_TRANSITION`, `details` liệt kê từng điều kiện còn thiếu (đã dịch theo ngôn ngữ). Công ty chưa duyệt thì 403 `COMPANY_NOT_APPROVED`. Hàm thuần `jobPublishBlockers` và bảng `JOB_TRANSITIONS` nằm trong `packages/shared` để frontend dùng lại.
+- Sửa tin đang PUBLISHED cũng phải giữ đủ điều kiện đăng (không đặt hạn đã qua, không bỏ hết kỹ năng).
+- Mở lại giữ `publishedAt` của lần đăng đầu, xóa `closedAt`. Đổi trạng thái dùng `UPDATE ... WHERE status = <trạng thái cũ>` nên bấm hai lần cùng lúc thì lần sau nhận 400.
+
 Tin được coi là công khai (hàm `isJobPublic(job, company, now)`) khi đủ 4 điều kiện: PUBLISHED, không bị ẩn, công ty APPROVED, `expiresAt > now`.
 
 API chi tiết tin công khai trả về theo 3 trường hợp:

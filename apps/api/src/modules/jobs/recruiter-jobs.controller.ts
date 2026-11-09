@@ -26,6 +26,7 @@ import {
   RecruiterJobDto,
   RecruiterJobListItemDto,
   RecruiterJobsQueryDto,
+  ReopenJobDto,
   UpdateJobDto,
 } from './dto/job.dto';
 import { RecruiterJobsService } from './recruiter-jobs.service';
@@ -110,5 +111,64 @@ export class RecruiterJobsController {
   )
   remove(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.recruiterJobsService.remove(user.companyId, id);
+  }
+
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Đăng tin nháp (DRAFT → PUBLISHED)',
+    description:
+      'Cần công ty đã duyệt (không thì 403 COMPANY_NOT_APPROVED), có bản vi, hạn nhận hồ sơ ở tương lai, ít nhất 1 kỹ năng. Thiếu điều kiện thì 400 JOB_INVALID_TRANSITION, `details` liệt kê từng điều kiện còn thiếu.',
+  })
+  @ApiDataResponse(RecruiterJobDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.NOT_FOUND,
+  )
+  publish(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<RecruiterJob> {
+    return this.recruiterJobsService.publish(user.companyId, id);
+  }
+
+  @Post(':id/close')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đóng tin đang đăng (PUBLISHED → CLOSED): ngừng nhận đơn' })
+  @ApiDataResponse(RecruiterJobDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.NOT_FOUND,
+  )
+  close(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<RecruiterJob> {
+    return this.recruiterJobsService.close(user.companyId, id);
+  }
+
+  @Post(':id/reopen')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mở lại tin đã đóng (CLOSED → PUBLISHED)',
+    description: 'Bắt buộc gửi `expiresAt` mới ở tương lai; kiểm lại điều kiện như khi đăng.',
+  })
+  @ApiDataResponse(RecruiterJobDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.NOT_FOUND,
+  )
+  reopen(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ReopenJobDto,
+  ): Promise<RecruiterJob> {
+    return this.recruiterJobsService.reopen(user.companyId, id, body);
   }
 }

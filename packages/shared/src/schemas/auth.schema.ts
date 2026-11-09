@@ -11,8 +11,17 @@ export const ValidationMessage = {
   SALARY_MIN_GREATER_THAN_MAX: 'SALARY_MIN_GREATER_THAN_MAX',
   SALARY_REQUIRES_PAID: 'SALARY_REQUIRES_PAID',
   DUPLICATE_SKILL: 'DUPLICATE_SKILL',
+  JOB_VI_REQUIRED: 'JOB_VI_REQUIRED',
+  JOB_EXPIRES_AT_IN_FUTURE: 'JOB_EXPIRES_AT_IN_FUTURE',
+  JOB_SKILL_REQUIRED: 'JOB_SKILL_REQUIRED',
 } as const;
 export type ValidationMessage = (typeof ValidationMessage)[keyof typeof ValidationMessage];
+
+const validationMessages: readonly string[] = Object.values(ValidationMessage);
+
+export function isValidationMessage(value: unknown): value is ValidationMessage {
+  return typeof value === 'string' && validationMessages.includes(value);
+}
 
 export const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(255));
 

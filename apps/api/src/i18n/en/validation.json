@@ -4,5 +4,8 @@
   "AT_LEAST_ONE_FIELD": "Send at least one field to update",
   "SALARY_MIN_GREATER_THAN_MAX": "Minimum salary cannot be greater than maximum salary",
   "SALARY_REQUIRES_PAID": "Only enter a salary when the job is paid",
-  "DUPLICATE_SKILL": "Each skill can only be selected once"
+  "DUPLICATE_SKILL": "Each skill can only be selected once",
+  "JOB_VI_REQUIRED": "The job needs a Vietnamese version",
+  "JOB_EXPIRES_AT_IN_FUTURE": "The application deadline must be in the future",
+  "JOB_SKILL_REQUIRED": "The job needs at least one skill"
 }

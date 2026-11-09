@@ -3,6 +3,7 @@ import {
   CURRENCIES,
   JobStatus,
   recruiterJobsQuerySchema,
+  reopenJobSchema,
   updateJobSchema,
   WorkMode,
 } from '@ltwnc/shared';
@@ -12,6 +13,8 @@ import { z } from 'zod';
 export class CreateJobDto extends createZodDto(createJobSchema) {}
 
 export class UpdateJobDto extends createZodDto(updateJobSchema) {}
+
+export class ReopenJobDto extends createZodDto(reopenJobSchema) {}
 
 export class RecruiterJobsQueryDto extends createZodDto(recruiterJobsQuerySchema) {}
 

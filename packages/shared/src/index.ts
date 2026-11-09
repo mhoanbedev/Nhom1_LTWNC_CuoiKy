@@ -13,3 +13,4 @@ export * from './schemas/admin.schema';
 export * from './schemas/job.schema';
 export * from './utils/text';
 export * from './domain/job-visibility';
+export * from './domain/job-lifecycle';

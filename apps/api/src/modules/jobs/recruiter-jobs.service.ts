@@ -2,11 +2,15 @@ import { randomInt } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
+  canTransitionJob,
   ErrorCode,
+  jobPublishBlockers,
   JobStatus,
   normalizeSearchText,
   slugify,
   type CreateJobInput,
+  type JobPublishInput,
+  type ReopenJobInput,
   type JobSkillInput,
   type JobTranslationInput,
   type Locale,
@@ -149,6 +153,14 @@ export class RecruiterJobsService {
       ) {
         throw new AppException(ErrorCode.BAD_REQUEST);
       }
+      // Tin đang đăng phải luôn giữ đủ điều kiện đăng (còn hạn, có kỹ năng), không thì 400.
+      if (job.status === JobStatus.PUBLISHED) {
+        assertPublishable({
+          expiresAt: merged.expiresAt,
+          hasVietnamese: true,
+          skillCount: input.skills?.length ?? job.skills?.length ?? 0,
+        });
+      }
       if (Object.keys(columns).length > 0) await manager.getRepository(Job).update(job.id, columns);
       if (input.translations) {
         await this.saveTranslations(manager, job, input.translations, job.translations ?? []);
@@ -158,6 +170,62 @@ export class RecruiterJobsService {
       await manager.getRepository(Job).update(job.id, { updatedAt: new Date() });
     });
     return this.get(companyId, id);
+  }
+
+  /**
+   * Đăng tin nháp (DRAFT → PUBLISHED). Công ty chưa duyệt thì 403 COMPANY_NOT_APPROVED;
+   * thiếu điều kiện thì 400 JOB_INVALID_TRANSITION kèm `details` liệt kê điều kiện còn thiếu.
+   */
+  async publish(companyId: string | null, id: string): Promise<RecruiterJob> {
+    const job = await this.findOwned(this.dataSource.manager, companyId, id);
+    assertTransition(job.status, JobStatus.PUBLISHED, JobStatus.DRAFT);
+    await this.companiesService.assertApproved(job.companyId);
+    assertPublishable(publishInputOf(job, job.expiresAt));
+    const now = new Date();
+    await this.transition(job, JobStatus.DRAFT, {
+      status: JobStatus.PUBLISHED,
+      publishedAt: now,
+      closedAt: null,
+    });
+    return this.get(companyId, id);
+  }
+
+  /** Đóng tin đang đăng (PUBLISHED → CLOSED): ngừng nhận đơn, đơn đã nhận vẫn giữ. */
+  async close(companyId: string | null, id: string): Promise<RecruiterJob> {
+    const job = await this.findOwned(this.dataSource.manager, companyId, id);
+    assertTransition(job.status, JobStatus.CLOSED, JobStatus.PUBLISHED);
+    await this.transition(job, JobStatus.PUBLISHED, {
+      status: JobStatus.CLOSED,
+      closedAt: new Date(),
+    });
+    return this.get(companyId, id);
+  }
+
+  /**
+   * Mở lại tin đã đóng (CLOSED → PUBLISHED) với hạn mới bắt buộc ở tương lai.
+   * Giữ `publishedAt` lần đăng đầu; kiểm lại công ty đã duyệt và điều kiện đăng như lúc đăng.
+   */
+  async reopen(companyId: string | null, id: string, input: ReopenJobInput): Promise<RecruiterJob> {
+    const job = await this.findOwned(this.dataSource.manager, companyId, id);
+    assertTransition(job.status, JobStatus.PUBLISHED, JobStatus.CLOSED);
+    await this.companiesService.assertApproved(job.companyId);
+    const expiresAt = new Date(input.expiresAt);
+    assertPublishable(publishInputOf(job, expiresAt));
+    await this.transition(job, JobStatus.CLOSED, {
+      status: JobStatus.PUBLISHED,
+      expiresAt,
+      closedAt: null,
+    });
+    return this.get(companyId, id);
+  }
+
+  /**
+   * Đổi trạng thái có điều kiện `WHERE status = <trạng thái đã đọc>`: hai request cùng lúc
+   * (vd bấm đăng hai lần) thì request sau không khớp dòng nào và nhận 400, không ghi đè nhau.
+   */
+  private async transition(job: Job, from: JobStatus, changes: Partial<Job>): Promise<void> {
+    const result = await this.jobs.update({ id: job.id, status: from }, changes);
+    if (!result.affected) throw new AppException(ErrorCode.JOB_INVALID_TRANSITION);
   }
 
   /** Chỉ xóa được bản nháp; tin đã đăng thì đóng chứ không xóa (giữ đơn ứng tuyển). */
@@ -235,6 +303,29 @@ export class RecruiterJobsService {
     await repository.insert(
       skills.map((skill) => ({ jobId, skillId: skill.skillId, isRequired: skill.isRequired })),
     );
+  }
+}
+
+function publishInputOf(job: Job, expiresAt: Date | null): JobPublishInput {
+  return {
+    expiresAt,
+    hasVietnamese: job.translations?.some((t) => t.locale === 'vi') ?? false,
+    skillCount: job.skills?.length ?? 0,
+  };
+}
+
+/** Thiếu điều kiện đăng thì 400 JOB_INVALID_TRANSITION, `details` liệt kê từng điều kiện (đã dịch). */
+function assertPublishable(input: JobPublishInput): void {
+  const blockers = jobPublishBlockers(input, new Date());
+  if (blockers.length > 0) {
+    throw new AppException(ErrorCode.JOB_INVALID_TRANSITION, undefined, blockers);
+  }
+}
+
+/** Trạng thái hiện tại phải đúng `expected` và bảng chuyển trạng thái cho phép đi tới `to`. */
+function assertTransition(current: JobStatus, to: JobStatus, expected: JobStatus): void {
+  if (current !== expected || !canTransitionJob(current, to)) {
+    throw new AppException(ErrorCode.JOB_INVALID_TRANSITION);
   }
 }
 
