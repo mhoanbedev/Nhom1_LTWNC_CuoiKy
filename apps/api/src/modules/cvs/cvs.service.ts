@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { CV_MAX_COUNT, ErrorCode, type CvFile as CvFileDto } from '@ltwnc/shared';
+import {
+  CV_MAX_COUNT,
+  ErrorCode,
+  Role,
+  type CvDownload,
+  type CvFile as CvFileDto,
+} from '@ltwnc/shared';
 import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import {
@@ -10,7 +16,11 @@ import {
   type UploadedPdfLike,
 } from '../../common/files/pdf-file';
 import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service';
+import type { RequestUser } from '../../common/types/request-user';
 import { CvFile } from './entities/cv-file.entity';
+
+/** Link tải CV sống 60 giây: đủ để trình duyệt bắt đầu tải, lộ ra cũng nhanh hết hạn. */
+export const CV_DOWNLOAD_TTL_SECONDS = 60;
 
 export function toCvFileDto(cv: CvFile): CvFileDto {
   return {
@@ -108,6 +118,22 @@ export class CvsService {
       });
       if (newest) await repository.update(newest.id, { isDefault: true });
     });
+  }
+
+  /**
+   * Link tải CV ký sẵn, sống 60 giây (mục 5.5). Quyền theo mục 2 của đặc tả:
+   * - Ứng viên: CV chưa xóa của chính mình.
+   * - Nhà tuyển dụng: CV gắn với đơn nộp vào tin của công ty mình (thêm ở bước Applications).
+   * - Admin và mọi trường hợp khác: 404, không lộ CV có tồn tại hay không.
+   */
+  async download(user: RequestUser, id: string): Promise<CvDownload> {
+    const cv =
+      user.role === Role.CANDIDATE
+        ? await this.findActive(this.dataSource.manager, user.id, id)
+        : null;
+    if (!cv) throw new AppException(ErrorCode.NOT_FOUND);
+    const link = this.cloudinary.privateDownloadUrl(cv.cloudinaryPublicId, CV_DOWNLOAD_TTL_SECONDS);
+    return { url: link.url, expiresAt: link.expiresAt.toISOString() };
   }
 
   /** CV chưa xóa của chính ứng viên; không có thì 404 (không lộ CV người khác có tồn tại). */

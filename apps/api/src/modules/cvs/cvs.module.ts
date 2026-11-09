@@ -4,10 +4,11 @@ import { CloudinaryModule } from '../../infrastructure/cloudinary/cloudinary.mod
 import { CvsController } from './cvs.controller';
 import { CvsService } from './cvs.service';
 import { CvFile } from './entities/cv-file.entity';
+import { FilesController } from './files.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([CvFile]), CloudinaryModule],
-  controllers: [CvsController],
+  controllers: [CvsController, FilesController],
   providers: [CvsService],
   exports: [CvsService],
 })

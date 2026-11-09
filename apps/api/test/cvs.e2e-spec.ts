@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { CloudinaryService } from '../src/infrastructure/cloudinary/cloudinary.service';
+import { adminSession } from './utils/admin-session';
 
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj << >> endobj\n%%EOF');
 
@@ -23,6 +24,12 @@ class FakeCloudinary {
   deletePrivateFile(publicId: string) {
     this.deleted.push(publicId);
     return Promise.resolve();
+  }
+  privateDownloadUrl(publicId: string, ttlSeconds: number) {
+    return {
+      url: `https://api.cloudinary.test/raw/download?public_id=${encodeURIComponent(publicId)}`,
+      expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+    };
   }
 }
 
@@ -211,5 +218,55 @@ describe('CV: upload, mặc định, xóa (e2e)', () => {
       .expect(201);
     const recruiter = (res.body as { data: AuthResponse }).data;
     await http().get('/api/v1/me/cvs').set(bearer(recruiter)).expect(403);
+  });
+
+  describe('tải CV', () => {
+    const download = (cvId: string, token?: string) => {
+      const req = http().get(`/api/v1/files/cvs/${cvId}`);
+      return token ? req.set({ Authorization: `Bearer ${token}` }) : req;
+    };
+
+    it('chủ CV nhận link sống 60 giây, không cho cache', async () => {
+      const owner = await newCandidate();
+      const cv = cvOf(await upload(owner).expect(201));
+      const before = Date.now();
+      const res = await download(cv.id, owner.accessToken).expect(200);
+      const data = (res.body as { data: { url: string; expiresAt: string } }).data;
+      expect(data.url).toContain(encodeURIComponent(`cvs/${owner.user.id}/`));
+      const ttl = new Date(data.expiresAt).getTime() - before;
+      expect(ttl).toBeGreaterThan(55_000);
+      expect(ttl).toBeLessThanOrEqual(61_000);
+      expect(res.headers['cache-control']).toBe('no-store');
+    });
+
+    it('người khác, CV đã xóa, admin, nhà tuyển dụng không liên quan: 404; không token: 401', async () => {
+      const owner = await newCandidate();
+      const cv = cvOf(await upload(owner).expect(201));
+      const other = await newCandidate();
+      await download(cv.id, other.accessToken).expect(404);
+
+      const admin = await adminSession(app, dataSource);
+      try {
+        await download(cv.id, admin.token).expect(404);
+      } finally {
+        await admin.cleanup();
+      }
+
+      counter += 1;
+      const res = await http()
+        .post('/api/v1/auth/register/recruiter')
+        .send({
+          email: `e2e-cv-${runId}-${counter}@test.local`,
+          password: 'abc12345',
+          name: 'HR',
+          company: { translations: { vi: { name: `Công ty Tải CV ${runId}` } } },
+        })
+        .expect(201);
+      await download(cv.id, (res.body as { data: AuthResponse }).data.accessToken).expect(404);
+      await download(cv.id).expect(401);
+
+      await http().delete(`/api/v1/me/cvs/${cv.id}`).set(bearer(owner)).expect(204);
+      await download(cv.id, owner.accessToken).expect(404);
+    });
   });
 });
