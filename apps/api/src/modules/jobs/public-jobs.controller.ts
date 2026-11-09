@@ -56,7 +56,7 @@ export class PublicJobsController {
   @ApiOperation({
     summary: 'Chi tiết tin công khai',
     description:
-      'Tìm theo shortId ở cuối slug. Tin đã đóng hoặc hết hạn: 200 với `seo.indexable: false`, `isAcceptingApplications: false`. Nháp, bị ẩn, công ty chưa duyệt, hoặc không có bản theo `lang`: 404. Slug trên URL khác `canonicalSlug` thì frontend redirect 308. Token không bắt buộc: ứng viên gửi kèm token thì có thêm `isSaved`.',
+      'Tìm theo shortId ở cuối slug. Tin đã đóng hoặc hết hạn: 200 với `seo.indexable: false`, `isAcceptingApplications: false`. Nháp, bị ẩn, công ty chưa duyệt, hoặc không có bản theo `lang`: 404. Slug trên URL khác `canonicalSlug` thì frontend redirect 308. Token không bắt buộc: ứng viên gửi kèm token thì có thêm `isSaved`, `hasApplied`.',
   })
   @ApiDataResponse(PublicJobDetailDto)
   @ApiErrorResponses(HttpStatus.NOT_FOUND)

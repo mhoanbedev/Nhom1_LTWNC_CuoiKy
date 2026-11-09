@@ -1,0 +1,35 @@
+{
+  "NEW_APPLICATION": {
+    "title": "New application",
+    "body": "{candidateName} applied to \"{jobTitle}\""
+  },
+  "APPLICATION_STATUS_CHANGED": {
+    "title": "Your application was updated",
+    "body": "\"{jobTitle}\": {fromStatus} → {toStatus}",
+    "note": "Note: {note}"
+  },
+  "APPLICATION_WITHDRAWN": {
+    "title": "Application withdrawn",
+    "body": "{candidateName} withdrew their application to \"{jobTitle}\""
+  },
+  "COMPANY_APPROVED": {
+    "title": "Company approved",
+    "body": "{companyName} has been approved. You can now post jobs."
+  },
+  "COMPANY_REJECTED": {
+    "title": "Company not approved",
+    "body": "{companyName} was rejected. Reason: {reason}. Update your company information to resubmit."
+  },
+  "JOB_HIDDEN": {
+    "title": "Job posting hidden",
+    "body": "\"{jobTitle}\" was hidden by an administrator. Reason: {reason}"
+  },
+  "STATUS": {
+    "SUBMITTED": "Submitted",
+    "REVIEWING": "Under review",
+    "INTERVIEW": "Interview",
+    "PASSED": "Passed",
+    "FAILED": "Not selected",
+    "WITHDRAWN": "Withdrawn"
+  }
+}

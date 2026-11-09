@@ -21,6 +21,7 @@ import { containsPattern } from '../../common/utils/search';
 import type { RequestUser } from '../../common/types/request-user';
 import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
+import { Application } from '../applications/entities/application.entity';
 import { toPublicJobDetail, toPublicJobListItem } from './public-job.mapper';
 
 const SHORT_ID_PATTERN = /^[a-z0-9]{6}$/;
@@ -133,7 +134,9 @@ export class PublicJobsService {
     const detail = toPublicJobDetail(job, lang, { isPublic: isOpen(job) });
     // Thông tin riêng của người xem chỉ thêm cho ứng viên đã đăng nhập.
     if (viewer?.role === Role.CANDIDATE) {
-      detail.isSaved = await this.savedJobs.existsBy({ candidateId: viewer.id, jobId: job.id });
+      const where = { candidateId: viewer.id, jobId: job.id };
+      detail.isSaved = await this.savedJobs.existsBy(where);
+      detail.hasApplied = await this.jobs.manager.existsBy(Application, where);
     }
     return detail;
   }

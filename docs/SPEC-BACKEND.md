@@ -216,6 +216,11 @@ Khi nộp đơn, server kiểm lần lượt:
 
 Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ sơ tại thời điểm nộp), ghi một dòng lịch sử (null sang SUBMITTED), và tạo thông báo `NEW_APPLICATION` cho recruiter. Đơn đã rút thì không nộp lại vào cùng tin đó được.
 
+- `PROFILE_INCOMPLETE` kèm `details: [{ field: <bước>, message }]` liệt kê bước bắt buộc còn thiếu, để frontend dẫn tới đúng bước. `coverLetter` không bắt buộc, tối đa 3000 ký tự; `cvFileId` bắt buộc (frontend chọn sẵn CV mặc định).
+- `profileSnapshot` gồm tên, email, avatar của ứng viên và hồ sơ 4 bước lúc nộp (tên kỹ năng tiếng Việt, kèm `skillId`, `slug`).
+- Khóa ngoại từ đơn tới tin và CV là `NO ACTION`: không xóa được tin hay CV đang có đơn trỏ tới.
+- `GET /jobs/:slug` có thêm `hasApplied` khi người xem là ứng viên (kể cả đơn đã rút).
+
 ### 5.4 Trạng thái hồ sơ ứng tuyển
 
 | Từ | Recruiter được chuyển sang | Candidate được chuyển sang |
@@ -229,6 +234,10 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Chuyển sai trả 400 `APPLICATION_INVALID_TRANSITION`.
 - Chống hai người cùng đổi một lúc: cập nhật có điều kiện bằng `repo.update({ id, status: from }, { status: to })`. Nếu `result.affected` bằng 0 thì trả 409 `APPLICATION_STATUS_CONFLICT`.
 - Mỗi lần chuyển: ghi lịch sử (ai, lúc nào, ghi chú tùy chọn) và gửi thông báo `APPLICATION_STATUS_CHANGED` cho bên còn lại, tất cả trong một transaction.
+- `note` khi nhà tuyển dụng đổi trạng thái (tối đa 500 ký tự) ghi vào lịch sử và ứng viên cũng thấy; ghi chú chỉ nhà tuyển dụng thấy là ghi chú nội bộ (endpoint riêng). Rút đơn không cần body.
+- Đóng tin hay công ty bị thu hồi duyệt không chặn việc xử lý đơn đã có: chỉ ngừng nhận đơn mới, ứng viên vẫn cần nhận kết quả.
+- Chi tiết đơn phía nhà tuyển dụng kèm `allowedTransitions` (dùng `nextStatuses`) để hiện nút.
+- Nhà tuyển dụng tải được CV đính kèm đơn vào tin của công ty mình, kể cả khi ứng viên đã xóa CV đó.
 
 ### 5.5 CV
 
@@ -260,6 +269,9 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 
 - Notification được tạo trong cùng transaction với hành động sinh ra nó.
 - Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
+- `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
+- `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
+- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). `JOB_HIDDEN` nối vào khi làm chức năng ẩn tin.
 - Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
 
 ### 5.9 Thống kê
@@ -371,7 +383,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | GET | /recruiter/jobs/:id/applications | Recruiter công ty sở hữu | Lọc theo `status`, phân trang |
 | GET | /recruiter/applications/:id | Recruiter công ty sở hữu | Snapshot hồ sơ, CV, lịch sử, ghi chú |
 | PATCH | /recruiter/applications/:id/status | Recruiter công ty sở hữu | Body `{ to, note? }`, theo bảng 5.4 |
-| GET, POST | /recruiter/applications/:id/notes | Recruiter công ty sở hữu |  |
+| GET, POST | /recruiter/applications/:id/notes | Recruiter công ty sở hữu | Ghi chú nội bộ (tối đa 2000 ký tự), chỉ thêm, không sửa, không xóa; trả hết, mới nhất lên trước. Ứng viên không bao giờ thấy |
 | PATCH, DELETE | /recruiter/notes/:noteId | Tác giả ghi chú |  |
 | GET | /recruiter/stats | Recruiter |  |
 

@@ -6,6 +6,7 @@ import {
   type CandidateProfile as CandidateProfileDto,
   type EducationStepInput,
   type Locale,
+  type ProfileSnapshot,
   type ProjectsStepInput,
   type SkillsStepInput,
 } from '@ltwnc/shared';
@@ -32,6 +33,15 @@ export class ProfilesService {
       relations: RELATIONS,
     });
     return profile ? toCandidateProfile(profile, lang) : EMPTY_PROFILE;
+  }
+
+  /**
+   * Hồ sơ hiện tại để chụp vào đơn ứng tuyển (`profileSnapshot`). Tên kỹ năng theo tiếng Việt;
+   * vẫn giữ `skillId`, `slug` để hiển thị ngôn ngữ khác.
+   */
+  async snapshot(userId: string): Promise<ProfileSnapshot['profile']> {
+    const { basic, education, skills, projects } = await this.get(userId, 'vi');
+    return { basic, education, skills, projects };
   }
 
   /** Các bước đã xong; chưa có hồ sơ thì rỗng. Dùng khi kiểm điều kiện nộp đơn. */

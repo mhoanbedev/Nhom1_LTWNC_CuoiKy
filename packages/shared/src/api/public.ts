@@ -78,6 +78,8 @@ export interface PublicJobDetail extends Omit<PublicJobListItem, 'company' | 'ex
   seo: { indexable: boolean };
   /** Chỉ có khi người xem là ứng viên đã đăng nhập (gửi kèm token). */
   isSaved?: boolean;
+  /** Ứng viên đã nộp đơn vào tin này chưa (kể cả đơn đã rút); chỉ có khi là ứng viên. */
+  hasApplied?: boolean;
 }
 
 /** Một tin trong `GET /me/saved-jobs`. Tin đã đóng hay hết hạn vẫn hiện, kèm `isAcceptingApplications: false`. */

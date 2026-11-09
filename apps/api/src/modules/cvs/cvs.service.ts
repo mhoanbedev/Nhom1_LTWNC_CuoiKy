@@ -120,20 +120,41 @@ export class CvsService {
     });
   }
 
+  /** CV chưa xóa của chính ứng viên, dùng khi nộp đơn; không có thì null (nơi gọi trả CV_INVALID). */
+  findUsable(candidateId: string, id: string): Promise<CvFile | null> {
+    return this.cvs.findOneBy({ id, candidateId, deletedAt: IsNull() });
+  }
+
   /**
    * Link tải CV ký sẵn, sống 60 giây (mục 5.5). Quyền theo mục 2 của đặc tả:
    * - Ứng viên: CV chưa xóa của chính mình.
-   * - Nhà tuyển dụng: CV gắn với đơn nộp vào tin của công ty mình (thêm ở bước Applications).
+   * - Nhà tuyển dụng: CV gắn với một đơn nộp vào tin của công ty mình, kể cả khi ứng viên đã xóa
+   *   CV đó (xóa mềm, đơn vẫn cần).
    * - Admin và mọi trường hợp khác: 404, không lộ CV có tồn tại hay không.
    */
   async download(user: RequestUser, id: string): Promise<CvDownload> {
-    const cv =
-      user.role === Role.CANDIDATE
-        ? await this.findActive(this.dataSource.manager, user.id, id)
-        : null;
+    let cv: CvFile | null = null;
+    if (user.role === Role.CANDIDATE) {
+      cv = await this.findActive(this.dataSource.manager, user.id, id);
+    } else if (user.role === Role.RECRUITER && user.companyId) {
+      cv = await this.findAttachedToCompany(id, user.companyId);
+    }
     if (!cv) throw new AppException(ErrorCode.NOT_FOUND);
     const link = this.cloudinary.privateDownloadUrl(cv.cloudinaryPublicId, CV_DOWNLOAD_TTL_SECONDS);
     return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+  }
+
+  /** CV (kể cả đã xóa mềm) đính kèm ít nhất một đơn nộp vào tin của công ty `companyId`. */
+  private findAttachedToCompany(id: string, companyId: string): Promise<CvFile | null> {
+    return this.cvs
+      .createQueryBuilder('cv')
+      .where('cv.id = :id', { id })
+      .andWhere(
+        `EXISTS (SELECT 1 FROM applications a JOIN jobs j ON j.id = a.job_id
+          WHERE a.cv_file_id = cv.id AND j.company_id = :companyId)`,
+        { companyId },
+      )
+      .getOne();
   }
 
   /** CV chưa xóa của chính ứng viên; không có thì 404 (không lộ CV người khác có tồn tại). */

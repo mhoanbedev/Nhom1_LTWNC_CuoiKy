@@ -10,5 +10,6 @@
   "JOB_SKILL_REQUIRED": "The job needs at least one skill",
   "END_BEFORE_START": "End date cannot be before start date",
   "PHONE_INVALID": "Invalid phone number (e.g. 0912345678 or +84912345678)",
-  "DATE_IN_PAST": "The date must be before today"
+  "DATE_IN_PAST": "The date must be before today",
+  "PROFILE_STEP_INCOMPLETE": "This required step is not completed"
 }
