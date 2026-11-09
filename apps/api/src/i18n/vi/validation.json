@@ -1,3 +1,5 @@
 {
-  "PASSWORD_LETTER_AND_DIGIT": "Mật khẩu phải có cả chữ và số"
+  "PASSWORD_LETTER_AND_DIGIT": "Mật khẩu phải có cả chữ và số",
+  "PASSWORD_SAME_AS_CURRENT": "Mật khẩu mới phải khác mật khẩu hiện tại",
+  "AT_LEAST_ONE_FIELD": "Cần gửi ít nhất một trường để cập nhật"
 }

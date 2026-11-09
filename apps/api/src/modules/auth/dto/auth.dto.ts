@@ -1,8 +1,10 @@
 import {
+  changePasswordSchema,
   LOCALES,
   loginSchema,
   refreshTokenSchema,
   registerCandidateSchema,
+  updateMeSchema,
   USER_ROLES,
 } from '@ltwnc/shared';
 import { createZodDto } from 'nestjs-zod';
@@ -14,7 +16,11 @@ export class LoginDto extends createZodDto(loginSchema) {}
 
 export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}
 
-/** Chỉ để mô tả trên Swagger; kiểu thật là AuthResponse trong @ltwnc/shared. */
+export class UpdateMeDto extends createZodDto(updateMeSchema) {}
+
+export class ChangePasswordDto extends createZodDto(changePasswordSchema) {}
+
+/** Chỉ để mô tả trên Swagger; kiểu thật là AuthUser trong @ltwnc/shared. */
 const authUserSchema = z.object({
   id: z.uuid(),
   email: z.email(),
@@ -24,6 +30,8 @@ const authUserSchema = z.object({
   preferredLocale: z.enum(LOCALES),
   avatarUrl: z.url().nullable(),
 });
+
+export class AuthUserDto extends createZodDto(authUserSchema) {}
 
 export class AuthResponseDto extends createZodDto(
   z.object({

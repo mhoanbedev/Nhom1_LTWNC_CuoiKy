@@ -5,9 +5,12 @@ import {
   ErrorCode,
   UserStatus,
   type AuthResponse,
+  type AuthUser,
+  type ChangePasswordInput,
   type Locale,
   type LoginInput,
   type RegisterCandidateInput,
+  type UpdateMeInput,
 } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { jwtConfig } from '../../config/jwt.config';
@@ -78,6 +81,44 @@ export class AuthService {
       throw new AppException(ErrorCode.AUTH_ACCOUNT_LOCKED);
     }
     return this.buildResponse(user, issued);
+  }
+
+  /** Thông tin user hiện tại, đọc mới từ DB (không lấy từ token). */
+  async me(userId: string): Promise<AuthUser> {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new AppException(ErrorCode.AUTH_TOKEN_INVALID);
+    return toAuthUser(user);
+  }
+
+  async updateMe(userId: string, input: UpdateMeInput): Promise<AuthUser> {
+    return toAuthUser(await this.usersService.updateProfile(userId, input));
+  }
+
+  /**
+   * Đổi mật khẩu rồi mở phiên mới cho thiết bị đang dùng; mọi thiết bị khác bị đăng xuất.
+   * Thứ tự: thu hồi phiên cũ trước, đặt mật khẩu sau, để lỗi giữa chừng không bao giờ
+   * để lại tình trạng mật khẩu đã đổi mà phiên cũ vẫn sống.
+   */
+  async changePassword(
+    userId: string,
+    input: ChangePasswordInput,
+    client: ClientInfo,
+  ): Promise<AuthResponse> {
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user) throw new AppException(ErrorCode.AUTH_TOKEN_INVALID);
+
+    // Tài khoản chỉ đăng nhập Google chưa có mật khẩu: được đặt lần đầu không cần mật khẩu cũ.
+    if (user.passwordHash) {
+      const valid =
+        input.currentPassword !== undefined &&
+        (await this.passwordService.verify(user.passwordHash, input.currentPassword));
+      if (!valid) throw new AppException(ErrorCode.AUTH_PASSWORD_INCORRECT);
+    }
+
+    const newHash = await this.passwordService.hash(input.newPassword);
+    await this.refreshTokenService.revokeAllForUser(user.id);
+    const updated = await this.usersService.setPassword(user.id, newHash);
+    return this.startSession(updated, client);
   }
 
   /** Đăng xuất phiên hiện tại. Token không tồn tại hay của người khác thì bỏ qua (idempotent). */

@@ -6,6 +6,8 @@ import { z } from 'zod';
  */
 export const ValidationMessage = {
   PASSWORD_LETTER_AND_DIGIT: 'PASSWORD_LETTER_AND_DIGIT',
+  PASSWORD_SAME_AS_CURRENT: 'PASSWORD_SAME_AS_CURRENT',
+  AT_LEAST_ONE_FIELD: 'AT_LEAST_ONE_FIELD',
 } as const;
 export type ValidationMessage = (typeof ValidationMessage)[keyof typeof ValidationMessage];
 
@@ -41,3 +43,29 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(32).max(256),
 });
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
+
+/** PATCH /auth/me: đổi tên hoặc ngôn ngữ ưa thích (khi người dùng chuyển ngôn ngữ trên giao diện). */
+export const updateMeSchema = z
+  .object({
+    name: personNameSchema.optional(),
+    preferredLocale: z.enum(['vi', 'en']).optional(),
+  })
+  .refine((value) => value.name !== undefined || value.preferredLocale !== undefined, {
+    params: { i18n: ValidationMessage.AT_LEAST_ONE_FIELD },
+  });
+export type UpdateMeInput = z.infer<typeof updateMeSchema>;
+
+/**
+ * PATCH /auth/me/password. `currentPassword` bắt buộc khi tài khoản đã có mật khẩu;
+ * tài khoản chỉ đăng nhập Google được bỏ trống để đặt mật khẩu lần đầu.
+ */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128).optional(),
+    newPassword: passwordSchema,
+  })
+  .refine((value) => value.currentPassword !== value.newPassword, {
+    path: ['newPassword'],
+    params: { i18n: ValidationMessage.PASSWORD_SAME_AS_CURRENT },
+  });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

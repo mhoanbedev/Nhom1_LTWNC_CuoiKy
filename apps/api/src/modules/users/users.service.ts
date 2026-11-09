@@ -13,6 +13,11 @@ export interface CreateCandidateData {
   preferredLocale: Locale;
 }
 
+export interface UpdateProfileData {
+  name?: string;
+  preferredLocale?: Locale;
+}
+
 /** Module users là nơi duy nhất ghi bảng `users`; module khác gọi qua service này. */
 @Injectable()
 export class UsersService {
@@ -31,8 +36,37 @@ export class UsersService {
       .getOne();
   }
 
+  /** Kèm `passwordHash`, dùng khi đổi mật khẩu. */
+  findByIdWithPassword(id: string): Promise<User | null> {
+    return this.users
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
   existsByEmail(email: string): Promise<boolean> {
     return this.users.existsBy({ email });
+  }
+
+  /** Cập nhật tên, ngôn ngữ ưa thích. User không tồn tại thì 404. */
+  async updateProfile(id: string, data: UpdateProfileData): Promise<User> {
+    const user = await this.users.findOneBy({ id });
+    if (!user) throw new AppException(ErrorCode.NOT_FOUND);
+    if (data.name !== undefined) user.name = data.name;
+    if (data.preferredLocale !== undefined) user.preferredLocale = data.preferredLocale;
+    return this.users.save(user);
+  }
+
+  /**
+   * Đặt mật khẩu mới và ghi mốc `passwordChangedAt`: JwtStrategy từ chối mọi access token
+   * cấp trước mốc này, nên các thiết bị khác bị đăng xuất ngay chứ không đợi token hết hạn.
+   */
+  async setPassword(id: string, passwordHash: string): Promise<User> {
+    await this.users.update(id, { passwordHash, passwordChangedAt: new Date() });
+    const user = await this.users.findOneBy({ id });
+    if (!user) throw new AppException(ErrorCode.NOT_FOUND);
+    return user;
   }
 
   /**

@@ -529,6 +529,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | JOB\_INVALID\_TRANSITION | 400 | Chuyển trạng thái tin sai bảng 5.2 |
 | APPLICATION\_INVALID\_TRANSITION | 400 | Chuyển trạng thái đơn sai bảng 5.4 |
 | CANNOT\_LOCK\_SELF | 400 | Admin tự khóa tài khoản của chính mình |
+| AUTH\_PASSWORD\_INCORRECT | 400 | Đổi mật khẩu mà nhập sai mật khẩu hiện tại |
 | AUTH\_INVALID\_CREDENTIALS | 401 | Sai email hoặc mật khẩu |
 | AUTH\_TOKEN\_INVALID | 401 | Thiếu token, token sai hoặc hết hạn |
 | AUTH\_REFRESH\_INVALID | 401 | Refresh token sai hoặc hết hạn |

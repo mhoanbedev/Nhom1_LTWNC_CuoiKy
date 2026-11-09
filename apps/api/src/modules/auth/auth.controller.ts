@@ -1,6 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiNoContentResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AuthResponse, Locale } from '@ltwnc/shared';
+import type { AuthResponse, AuthUser, Locale } from '@ltwnc/shared';
 import { ClientInfo, type RequestClientInfo } from '../../common/decorators/client-info.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Lang } from '../../common/decorators/lang.decorator';
@@ -8,7 +8,15 @@ import { Public } from '../../common/decorators/public.decorator';
 import { ApiDataResponse, ApiErrorResponses } from '../../common/swagger/api-response.decorators';
 import type { RequestUser } from '../../common/types/request-user';
 import { AuthService } from './auth.service';
-import { AuthResponseDto, LoginDto, RefreshTokenDto, RegisterCandidateDto } from './dto/auth.dto';
+import {
+  AuthResponseDto,
+  AuthUserDto,
+  ChangePasswordDto,
+  LoginDto,
+  RefreshTokenDto,
+  RegisterCandidateDto,
+  UpdateMeDto,
+} from './dto/auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -73,5 +81,44 @@ export class AuthController {
   @ApiErrorResponses(HttpStatus.UNAUTHORIZED)
   logoutAll(@CurrentUser() user: RequestUser): Promise<void> {
     return this.authService.logoutAll(user.id);
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Thông tin user đang đăng nhập (đọc mới từ DB)' })
+  @ApiDataResponse(AuthUserDto)
+  @ApiErrorResponses(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
+  me(@CurrentUser() user: RequestUser): Promise<AuthUser> {
+    return this.authService.me(user.id);
+  }
+
+  @Patch('me')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Đổi tên hoặc ngôn ngữ ưa thích',
+    description:
+      'Frontend gọi khi người dùng chuyển ngôn ngữ, để thông báo và email sau đó dùng đúng ngôn ngữ.',
+  })
+  @ApiDataResponse(AuthUserDto)
+  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED)
+  updateMe(@CurrentUser() user: RequestUser, @Body() body: UpdateMeDto): Promise<AuthUser> {
+    return this.authService.updateMe(user.id, body);
+  }
+
+  @Patch('me/password')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Đổi mật khẩu',
+    description:
+      'Mọi thiết bị khác bị đăng xuất (refresh token bị thu hồi, access token cũ hết hiệu lực ngay). Trả cặp token mới cho thiết bị đang dùng.',
+  })
+  @ApiDataResponse(AuthResponseDto)
+  @ApiErrorResponses(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED)
+  changePassword(
+    @CurrentUser() user: RequestUser,
+    @Body() body: ChangePasswordDto,
+    @ClientInfo() client: RequestClientInfo,
+  ): Promise<AuthResponse> {
+    return this.authService.changePassword(user.id, body, client);
   }
 }

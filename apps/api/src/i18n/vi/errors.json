@@ -11,6 +11,7 @@
   "JOB_INVALID_TRANSITION": "Không thể chuyển trạng thái tin tuyển dụng",
   "APPLICATION_INVALID_TRANSITION": "Không thể chuyển trạng thái hồ sơ ứng tuyển",
   "CANNOT_LOCK_SELF": "Không thể khóa tài khoản của chính mình",
+  "AUTH_PASSWORD_INCORRECT": "Mật khẩu hiện tại không đúng",
   "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng",
   "AUTH_TOKEN_INVALID": "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
   "AUTH_REFRESH_INVALID": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",

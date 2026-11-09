@@ -11,6 +11,7 @@
   "JOB_INVALID_TRANSITION": "The job posting status cannot be changed this way",
   "APPLICATION_INVALID_TRANSITION": "The application status cannot be changed this way",
   "CANNOT_LOCK_SELF": "You cannot lock your own account",
+  "AUTH_PASSWORD_INCORRECT": "Your current password is incorrect",
   "AUTH_INVALID_CREDENTIALS": "Incorrect email or password",
   "AUTH_TOKEN_INVALID": "Your session is invalid or has expired",
   "AUTH_REFRESH_INVALID": "Your session has expired, please sign in again",

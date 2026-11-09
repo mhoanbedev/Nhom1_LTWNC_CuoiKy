@@ -1,4 +1,52 @@
-import { loginSchema, passwordSchema, registerCandidateSchema } from './auth.schema';
+import {
+  changePasswordSchema,
+  loginSchema,
+  passwordSchema,
+  registerCandidateSchema,
+  updateMeSchema,
+} from './auth.schema';
+
+describe('updateMeSchema', () => {
+  it('nhận chỉ đổi tên hoặc chỉ đổi ngôn ngữ', () => {
+    expect(updateMeSchema.safeParse({ name: 'An' }).success).toBe(true);
+    expect(updateMeSchema.safeParse({ preferredLocale: 'en' }).success).toBe(true);
+  });
+
+  it('từ chối body rỗng với khóa dịch AT_LEAST_ONE_FIELD', () => {
+    const result = updateMeSchema.safeParse({});
+    expect(result.error?.issues[0]).toMatchObject({
+      code: 'custom',
+      params: { i18n: 'AT_LEAST_ONE_FIELD' },
+    });
+  });
+
+  it('từ chối ngôn ngữ không hỗ trợ', () => {
+    expect(updateMeSchema.safeParse({ preferredLocale: 'fr' }).success).toBe(false);
+  });
+});
+
+describe('changePasswordSchema', () => {
+  it('mật khẩu mới phải đủ mạnh', () => {
+    expect(
+      changePasswordSchema.safeParse({ currentPassword: 'cu', newPassword: 'yeu' }).success,
+    ).toBe(false);
+  });
+
+  it('mật khẩu mới trùng mật khẩu cũ bị từ chối ở trường newPassword', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'abc12345',
+      newPassword: 'abc12345',
+    });
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ['newPassword'],
+      params: { i18n: 'PASSWORD_SAME_AS_CURRENT' },
+    });
+  });
+
+  it('được bỏ trống mật khẩu hiện tại (tài khoản Google đặt mật khẩu lần đầu)', () => {
+    expect(changePasswordSchema.safeParse({ newPassword: 'abc12345' }).success).toBe(true);
+  });
+});
 
 describe('passwordSchema', () => {
   it.each(['abc12345', 'Matkhau2026', 'a1b2c3d4'])('nhận %s', (value) => {

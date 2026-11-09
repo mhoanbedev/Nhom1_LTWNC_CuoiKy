@@ -51,6 +51,9 @@ describe('AuthService', () => {
     createCandidate: jest.fn<Promise<User>, [unknown]>(),
     findByEmailWithPassword: jest.fn<Promise<User | null>, [string]>(),
     findById: jest.fn<Promise<User | null>, [string]>(),
+    findByIdWithPassword: jest.fn<Promise<User | null>, [string]>(),
+    updateProfile: jest.fn<Promise<User>, [string, object]>(),
+    setPassword: jest.fn<Promise<User>, [string, string]>(),
   };
   const passwordService = {
     hash: jest.fn<Promise<string>, [string]>(),
@@ -203,6 +206,84 @@ describe('AuthService', () => {
     it('lỗi từ bước xoay vòng (dùng lại token) được ném tiếp', async () => {
       refreshTokenService.rotate.mockRejectedValue(new AppException(ErrorCode.AUTH_REFRESH_REUSED));
       await expectAppError(service.refresh('token-cu', client), ErrorCode.AUTH_REFRESH_REUSED);
+    });
+  });
+
+  describe('me / updateMe', () => {
+    it('me đọc user từ DB và không trả passwordHash', async () => {
+      usersService.findById.mockResolvedValue(makeUser({ name: 'Tên mới' }));
+      const me = await service.me('user-1');
+      expect(me).toMatchObject({ id: 'user-1', name: 'Tên mới' });
+      expect(me).not.toHaveProperty('passwordHash');
+    });
+
+    it('me khi user đã bị xóa trả AUTH_TOKEN_INVALID', async () => {
+      usersService.findById.mockResolvedValue(null);
+      await expectAppError(service.me('user-1'), ErrorCode.AUTH_TOKEN_INVALID);
+    });
+
+    it('updateMe chuyển dữ liệu cho UsersService và trả user đã cập nhật', async () => {
+      usersService.updateProfile.mockResolvedValue(makeUser({ preferredLocale: 'en' }));
+      const me = await service.updateMe('user-1', { preferredLocale: 'en' });
+      expect(usersService.updateProfile).toHaveBeenCalledWith('user-1', { preferredLocale: 'en' });
+      expect(me.preferredLocale).toBe('en');
+    });
+  });
+
+  describe('changePassword', () => {
+    beforeEach(() => {
+      passwordService.hash.mockResolvedValue('hash-moi');
+      usersService.setPassword.mockResolvedValue(makeUser());
+    });
+
+    it('đúng mật khẩu hiện tại: thu hồi mọi phiên, đặt mật khẩu mới rồi mở phiên mới', async () => {
+      usersService.findByIdWithPassword.mockResolvedValue(makeUser());
+      passwordService.verify.mockResolvedValue(true);
+
+      const result = await service.changePassword(
+        'user-1',
+        { currentPassword: 'cu123456', newPassword: 'moi123456' },
+        client,
+      );
+
+      expect(passwordService.verify).toHaveBeenCalledWith('hash', 'cu123456');
+      expect(usersService.setPassword).toHaveBeenCalledWith('user-1', 'hash-moi');
+      expect(refreshTokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
+      // Thu hồi phiên cũ phải xảy ra trước khi đổi mật khẩu.
+      expect(refreshTokenService.revokeAllForUser.mock.invocationCallOrder[0]).toBeLessThan(
+        usersService.setPassword.mock.invocationCallOrder[0] ?? 0,
+      );
+      expect(result.refreshToken).toBe('refresh-token-goc');
+    });
+
+    it('sai mật khẩu hiện tại trả AUTH_PASSWORD_INCORRECT, không đổi gì', async () => {
+      usersService.findByIdWithPassword.mockResolvedValue(makeUser());
+      passwordService.verify.mockResolvedValue(false);
+      await expectAppError(
+        service.changePassword(
+          'user-1',
+          { currentPassword: 'sai', newPassword: 'moi123456' },
+          client,
+        ),
+        ErrorCode.AUTH_PASSWORD_INCORRECT,
+      );
+      expect(usersService.setPassword).not.toHaveBeenCalled();
+      expect(refreshTokenService.revokeAllForUser).not.toHaveBeenCalled();
+    });
+
+    it('tài khoản có mật khẩu mà không gửi mật khẩu hiện tại cũng bị từ chối', async () => {
+      usersService.findByIdWithPassword.mockResolvedValue(makeUser());
+      await expectAppError(
+        service.changePassword('user-1', { newPassword: 'moi123456' }, client),
+        ErrorCode.AUTH_PASSWORD_INCORRECT,
+      );
+    });
+
+    it('tài khoản chỉ có Google được đặt mật khẩu lần đầu không cần mật khẩu cũ', async () => {
+      usersService.findByIdWithPassword.mockResolvedValue(makeUser({ passwordHash: null }));
+      await service.changePassword('user-1', { newPassword: 'moi123456' }, client);
+      expect(passwordService.verify).not.toHaveBeenCalled();
+      expect(usersService.setPassword).toHaveBeenCalledWith('user-1', 'hash-moi');
     });
   });
 
