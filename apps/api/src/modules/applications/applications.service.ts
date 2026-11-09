@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
+  ApplicationActor,
   ApplicationStatus,
   ErrorCode,
   profileCompletion,
@@ -22,6 +23,7 @@ import { Job } from '../jobs/entities/job.entity';
 import { isOpen, isViewable } from '../jobs/public-jobs.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { UsersService } from '../users/users.service';
+import { ApplicationTransitionService } from './application-transition.service';
 import { toCandidateApplication, toCandidateApplicationListItem } from './application.mapper';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import { Application } from './entities/application.entity';
@@ -38,6 +40,7 @@ export class ApplicationsService {
     private readonly profilesService: ProfilesService,
     private readonly cvsService: CvsService,
     private readonly usersService: UsersService,
+    private readonly transitions: ApplicationTransitionService,
   ) {}
 
   /**
@@ -127,6 +130,20 @@ export class ApplicationsService {
       total,
       query,
     );
+  }
+
+  /** Rút đơn: chỉ khi đơn còn mở (SUBMITTED, REVIEWING, INTERVIEW); đơn người khác trả 404. */
+  async withdraw(candidateId: string, id: string, lang: Locale): Promise<CandidateApplication> {
+    const application = await this.applications.findOneBy({ id, candidateId });
+    if (!application) throw new AppException(ErrorCode.NOT_FOUND);
+    await this.transitions.transition({
+      application,
+      to: ApplicationStatus.WITHDRAWN,
+      actor: ApplicationActor.CANDIDATE,
+      changedById: candidateId,
+      note: null,
+    });
+    return this.getMine(candidateId, id, lang);
   }
 
   /** Chi tiết đơn của chính ứng viên kèm lịch sử; đơn người khác trả 404. */

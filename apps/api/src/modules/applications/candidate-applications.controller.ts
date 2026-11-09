@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
@@ -75,6 +76,29 @@ export class CandidateApplicationsController {
     @Lang() lang: Locale,
   ): Promise<Paginated<CandidateApplicationListItem>> {
     return this.applicationsService.listMine(user.id, query, lang);
+  }
+
+  @Post('me/applications/:id/withdraw')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Rút đơn',
+    description:
+      'Chỉ khi đơn còn mở (SUBMITTED, REVIEWING, INTERVIEW), không thì 400 APPLICATION_INVALID_TRANSITION. Rút rồi không nộp lại tin đó được.',
+  })
+  @ApiDataResponse(CandidateApplicationDto)
+  @ApiErrorResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.UNAUTHORIZED,
+    HttpStatus.FORBIDDEN,
+    HttpStatus.NOT_FOUND,
+    HttpStatus.CONFLICT,
+  )
+  withdraw(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Lang() lang: Locale,
+  ): Promise<CandidateApplication> {
+    return this.applicationsService.withdraw(user.id, id, lang);
   }
 
   @Get('me/applications/:id')

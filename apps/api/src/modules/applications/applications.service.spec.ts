@@ -15,6 +15,7 @@ import { Job } from '../jobs/entities/job.entity';
 import { ProfilesService } from '../profiles/profiles.service';
 import type { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { ApplicationTransitionService } from './application-transition.service';
 import { ApplicationsService } from './applications.service';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
 import { Application } from './entities/application.entity';
@@ -83,6 +84,7 @@ describe('ApplicationsService.apply', () => {
         { provide: ProfilesService, useValue: profiles },
         { provide: CvsService, useValue: cvs },
         { provide: UsersService, useValue: users },
+        { provide: ApplicationTransitionService, useValue: {} },
       ],
     }).compile();
     service = moduleRef.get(ApplicationsService);

@@ -47,3 +47,25 @@ export interface CandidateApplication extends CandidateApplicationListItem {
   cv: { id: string; originalName: string };
   history: ApplicationHistoryItem[];
 }
+
+/** Một đơn trong `GET /recruiter/jobs/:id/applications`; thông tin ứng viên lấy từ ảnh chụp hồ sơ. */
+export interface RecruiterApplicationListItem {
+  id: string;
+  status: ApplicationStatus;
+  submittedAt: string;
+  updatedAt: string;
+  candidate: { name: string; email: string; avatarUrl: string | null; headline: string | null };
+  cv: { id: string; originalName: string };
+}
+
+/** `GET /recruiter/applications/:id` và kết quả đổi trạng thái. */
+export interface RecruiterApplication extends RecruiterApplicationListItem {
+  job: ApplicationJobSummary;
+  coverLetter: string | null;
+  /** Hồ sơ 4 bước tại lúc nộp. */
+  profile: ProfileSnapshot['profile'];
+  snapshotTakenAt: string;
+  history: ApplicationHistoryItem[];
+  /** Trạng thái nhà tuyển dụng được chuyển tới (để hiện nút); rỗng khi đơn đã kết thúc. */
+  allowedTransitions: ApplicationStatus[];
+}

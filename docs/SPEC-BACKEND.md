@@ -234,6 +234,10 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Chuyển sai trả 400 `APPLICATION_INVALID_TRANSITION`.
 - Chống hai người cùng đổi một lúc: cập nhật có điều kiện bằng `repo.update({ id, status: from }, { status: to })`. Nếu `result.affected` bằng 0 thì trả 409 `APPLICATION_STATUS_CONFLICT`.
 - Mỗi lần chuyển: ghi lịch sử (ai, lúc nào, ghi chú tùy chọn) và gửi thông báo `APPLICATION_STATUS_CHANGED` cho bên còn lại, tất cả trong một transaction.
+- `note` khi nhà tuyển dụng đổi trạng thái (tối đa 500 ký tự) ghi vào lịch sử và ứng viên cũng thấy; ghi chú chỉ nhà tuyển dụng thấy là ghi chú nội bộ (endpoint riêng). Rút đơn không cần body.
+- Đóng tin hay công ty bị thu hồi duyệt không chặn việc xử lý đơn đã có: chỉ ngừng nhận đơn mới, ứng viên vẫn cần nhận kết quả.
+- Chi tiết đơn phía nhà tuyển dụng kèm `allowedTransitions` (dùng `nextStatuses`) để hiện nút.
+- Nhà tuyển dụng tải được CV đính kèm đơn vào tin của công ty mình, kể cả khi ứng viên đã xóa CV đó.
 
 ### 5.5 CV
 

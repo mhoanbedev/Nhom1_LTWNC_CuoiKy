@@ -21,3 +21,24 @@ export const myApplicationsQuerySchema = paginationQuerySchema.extend({
   status: z.enum(Object.values(ApplicationStatus)).optional(),
 });
 export type MyApplicationsQuery = z.infer<typeof myApplicationsQuerySchema>;
+
+export const STATUS_NOTE_MAX = 500;
+
+/**
+ * `PATCH /recruiter/applications/:id/status`. `note` ghi vào lịch sử và ứng viên cũng thấy
+ * (vd "Mời phỏng vấn 9h thứ Hai"); ghi chú chỉ nhà tuyển dụng thấy là ghi chú nội bộ, endpoint riêng.
+ */
+export const changeApplicationStatusSchema = z.object({
+  to: z.enum(Object.values(ApplicationStatus)),
+  note: z
+    .string()
+    .trim()
+    .max(STATUS_NOTE_MAX)
+    .transform((value) => value || null)
+    .nullish(),
+});
+export type ChangeApplicationStatusInput = z.infer<typeof changeApplicationStatusSchema>;
+
+/** `GET /recruiter/jobs/:id/applications`: lọc theo trạng thái, phân trang. */
+export const recruiterApplicationsQuerySchema = myApplicationsQuerySchema;
+export type RecruiterApplicationsQuery = z.infer<typeof recruiterApplicationsQuerySchema>;

@@ -4,8 +4,10 @@ import type {
   CandidateApplication,
   CandidateApplicationListItem,
   Locale,
+  RecruiterApplication,
+  RecruiterApplicationListItem,
 } from '@ltwnc/shared';
-import { ErrorCode } from '@ltwnc/shared';
+import { ApplicationActor, ErrorCode, nextStatuses } from '@ltwnc/shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { companySummary, pickTranslation } from '../jobs/public-job.mapper';
 import type { Job } from '../jobs/entities/job.entity';
@@ -67,5 +69,38 @@ export function toCandidateApplication(
     coverLetter: application.coverLetter,
     cv: { id: cv.id, originalName: cv.originalName },
     history: toHistory(application.history, application.candidateId),
+  };
+}
+
+/** Đơn (kèm cvFile) → một dòng trong danh sách đơn của nhà tuyển dụng. */
+export function toRecruiterApplicationListItem(
+  application: Application,
+): RecruiterApplicationListItem {
+  const cv = application.cvFile;
+  if (!cv) throw new AppException(ErrorCode.INTERNAL_ERROR);
+  const { candidate, profile } = application.profileSnapshot;
+  return {
+    id: application.id,
+    status: application.status,
+    submittedAt: application.submittedAt.toISOString(),
+    updatedAt: application.updatedAt.toISOString(),
+    candidate: { ...candidate, headline: profile.basic?.headline ?? null },
+    cv: { id: cv.id, originalName: cv.originalName },
+  };
+}
+
+/** Đơn (kèm job, cvFile, history) → chi tiết cho nhà tuyển dụng, kèm trạng thái được chuyển tới. */
+export function toRecruiterApplication(
+  application: Application,
+  lang: Locale,
+): RecruiterApplication {
+  return {
+    ...toRecruiterApplicationListItem(application),
+    job: toApplicationJobSummary(application.job, lang),
+    coverLetter: application.coverLetter,
+    profile: application.profileSnapshot.profile,
+    snapshotTakenAt: application.profileSnapshot.takenAt,
+    history: toHistory(application.history, application.candidateId),
+    allowedTransitions: [...nextStatuses(application.status, ApplicationActor.RECRUITER)],
   };
 }
