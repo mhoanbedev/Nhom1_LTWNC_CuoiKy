@@ -30,6 +30,7 @@ Gõ `make` để xem đầy đủ.
 | `make migration-show` | Liệt kê migration và trạng thái đã chạy |
 | `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
 | `make migration-create name=TenMoTa` | Tạo migration rỗng để viết SQL tay |
+| `make cloudinary-check` | Thử key Cloudinary: upload một ảnh và một PDF riêng tư vào folder `dev-check/`, in link |
 | `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -54,6 +55,13 @@ Tài khoản demo sau `make seed`:
 
 Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).
 
+## Webhook revalidate (cho nhóm frontend)
+
+Khi dữ liệu công khai đổi (đăng, sửa, đóng tin; sửa công ty; admin duyệt...), backend gọi `POST REVALIDATE_URL` kèm header `x-revalidate-secret` và body `{ "tags": [...] }`. Tên tag và header lấy từ `RevalidateTag`, `REVALIDATE_SECRET_HEADER` trong `@ltwnc/shared`.
+
+- **Dev:** mỗi người tự chạy backend trên máy mình nên tự có secret riêng (`make env` sinh vào `apps/api/.env`). Muốn thử webhook: copy `REVALIDATE_SECRET` trong `apps/api/.env` **của chính mình** sang env của Next (`apps/web/.env.local`), rồi đặt `REVALIDATE_URL=http://localhost:3000/api/revalidate` trong `apps/api/.env`. Không cần xin secret của người khác.
+- **Production:** dùng một secret mới, chỉ đặt ở biến môi trường Render (backend) và Vercel (frontend), cùng một giá trị; không gửi qua chat nhóm. Thiếu `REVALIDATE_URL` khi `NODE_ENV=production` thì API không khởi động.
+
 ## Biến môi trường
 
 Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ sung biến mới; không commit `.env`.
@@ -70,4 +78,6 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `RATE_LIMIT_AUTH_PER_MINUTE` | Số request/phút trên một IP cho đăng ký, đăng nhập, refresh, Google; mặc định 30 |
 | `RATE_LIMIT_LOGIN_PER_EMAIL` | Số lần đăng nhập trong 15 phút cho một email (chặn dò mật khẩu); mặc định 10 |
 | `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh (công khai) và CV (riêng tư). Kiểm key bằng `make cloudinary-check` |
+| `REVALIDATE_URL`, `REVALIDATE_SECRET` | Webhook báo Next làm mới trang khi dữ liệu công khai đổi. URL để trống thì chỉ ghi log. Secret `make env` tự sinh; frontend dùng cùng giá trị để kiểm header `x-revalidate-secret` |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Chỉ `make seed` dùng: tài khoản admin duy nhất. Chạy seed lại với giá trị khác thì cập nhật chính admin đó |

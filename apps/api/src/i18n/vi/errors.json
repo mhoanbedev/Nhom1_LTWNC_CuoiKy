@@ -6,7 +6,7 @@
   "PROFILE_INCOMPLETE": "Hồ sơ chưa hoàn thành các bước bắt buộc",
   "CV_INVALID": "CV không hợp lệ hoặc đã bị xóa",
   "CV_LIMIT_REACHED": "Bạn đã có tối đa {max} CV",
-  "FILE_INVALID_TYPE": "Chỉ nhận file PDF",
+  "FILE_INVALID_TYPE": "Định dạng file không hợp lệ, chỉ nhận {allowed}",
   "FILE_TOO_LARGE": "File vượt quá {maxMb} MB",
   "JOB_INVALID_TRANSITION": "Không thể chuyển trạng thái tin tuyển dụng",
   "APPLICATION_INVALID_TRANSITION": "Không thể chuyển trạng thái hồ sơ ứng tuyển",

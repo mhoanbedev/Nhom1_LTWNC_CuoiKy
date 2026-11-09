@@ -6,7 +6,7 @@
   "PROFILE_INCOMPLETE": "Your profile has not completed the required steps",
   "CV_INVALID": "The CV is invalid or has been deleted",
   "CV_LIMIT_REACHED": "You already have the maximum of {max} CVs",
-  "FILE_INVALID_TYPE": "Only PDF files are accepted",
+  "FILE_INVALID_TYPE": "Invalid file type, only {allowed} accepted",
   "FILE_TOO_LARGE": "The file exceeds {maxMb} MB",
   "JOB_INVALID_TRANSITION": "The job posting status cannot be changed this way",
   "APPLICATION_INVALID_TRANSITION": "The application status cannot be changed this way",

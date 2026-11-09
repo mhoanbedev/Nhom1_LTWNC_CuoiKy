@@ -7,7 +7,8 @@ import {
   type Locale,
   type UserRole,
 } from '@ltwnc/shared';
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Company } from '../../companies/entities/company.entity';
 import { AppBaseEntity } from '../../../common/entities/app-base.entity';
 
 @Entity('users')
@@ -51,8 +52,12 @@ export class User extends AppBaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   avatarPublicId: string | null;
 
-  /** Chỉ recruiter có. Khóa ngoại tới companies thêm ở bước Companies. */
+  /** Chỉ recruiter có: công ty của nhà tuyển dụng (trùng `companies.owner_id`). */
   @Index('idx_users_company_id')
   @Column({ type: 'uuid', nullable: true })
   companyId: string | null;
+
+  @ManyToOne(() => Company, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'company_id' })
+  company?: Company | null;
 }

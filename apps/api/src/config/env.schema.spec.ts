@@ -7,6 +7,9 @@ const validEnv = {
   DATABASE_URL: 'postgresql://ltwnc:ltwnc@localhost:5435/ltwnc',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
+  CLOUDINARY_CLOUD_NAME: 'test-cloud',
+  CLOUDINARY_API_KEY: 'test-key',
+  CLOUDINARY_API_SECRET: 'test-secret',
 };
 
 describe('validateEnv', () => {
@@ -55,5 +58,36 @@ describe('validateEnv', () => {
 
   it('liệt kê mọi biến sai trong một lần báo lỗi', () => {
     expect(() => validateEnv({})).toThrow(/FRONTEND_URL[\s\S]*DATABASE_URL/);
+  });
+
+  it('REVALIDATE_URL để trống thì coi như tắt webhook', () => {
+    const env = validateEnv({ ...validEnv, REVALIDATE_URL: '', REVALIDATE_SECRET: '' });
+    expect(env.REVALIDATE_URL).toBeUndefined();
+  });
+
+  it('có REVALIDATE_URL thì bắt buộc REVALIDATE_SECRET', () => {
+    expect(() =>
+      validateEnv({ ...validEnv, REVALIDATE_URL: 'http://localhost:3000/api/revalidate' }),
+    ).toThrow(/REVALIDATE_SECRET/);
+    expect(
+      validateEnv({
+        ...validEnv,
+        REVALIDATE_URL: 'http://localhost:3000/api/revalidate',
+        REVALIDATE_SECRET: 'x'.repeat(16),
+      }).REVALIDATE_URL,
+    ).toBe('http://localhost:3000/api/revalidate');
+  });
+
+  it('production bắt buộc REVALIDATE_URL, dev thì không', () => {
+    expect(() => validateEnv({ ...validEnv, NODE_ENV: 'production' })).toThrow(/REVALIDATE_URL/);
+    expect(
+      validateEnv({
+        ...validEnv,
+        NODE_ENV: 'production',
+        REVALIDATE_URL: 'https://web.example.com/api/revalidate',
+        REVALIDATE_SECRET: 'x'.repeat(32),
+      }).NODE_ENV,
+    ).toBe('production');
+    expect(validateEnv({ ...validEnv, NODE_ENV: 'development' }).REVALIDATE_URL).toBeUndefined();
   });
 });

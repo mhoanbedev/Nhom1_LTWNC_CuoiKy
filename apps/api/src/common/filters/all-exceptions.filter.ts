@@ -7,7 +7,13 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { DEFAULT_LOCALE, ErrorCode, type ApiError, type ApiErrorDetail } from '@ltwnc/shared';
+import {
+  DEFAULT_LOCALE,
+  ErrorCode,
+  isValidationMessage,
+  type ApiError,
+  type ApiErrorDetail,
+} from '@ltwnc/shared';
 import type { Request, Response } from 'express';
 import { I18nService } from 'nestjs-i18n';
 import { EntityNotFoundError } from 'typeorm';
@@ -98,12 +104,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(`[${request.requestId}] ${request.method} ${request.url}`, stack);
     }
 
+    const translateKey = (key: string) => this.i18n.t(`validation.${key}`, { lang: locale });
+    // Lỗi Zod dịch từ ZodError gốc; lỗi nghiệp vụ có details mà message là khóa ValidationMessage
+    // (vd điều kiện đăng tin còn thiếu) thì dịch khóa đó, còn lại giữ nguyên.
     const localizedDetails =
       exception instanceof ValidationFailedException
-        ? zodIssuesToDetails(exception.zodError, locale, (key) =>
-            this.i18n.t(`validation.${key}`, { lang: locale }),
-          )
-        : details;
+        ? zodIssuesToDetails(exception.zodError, locale, translateKey)
+        : details?.map((detail) =>
+            isValidationMessage(detail.message)
+              ? { field: detail.field, message: translateKey(detail.message) }
+              : detail,
+          );
 
     const body: ApiError = {
       statusCode: status,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ErrorCode, Role, type Locale } from '@ltwnc/shared';
-import { Repository } from 'typeorm';
+import { ErrorCode, Role, type Locale, type UserRole } from '@ltwnc/shared';
+import { EntityManager, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { isUniqueViolation } from '../../database/pg-errors';
 import { User } from './entities/user.entity';
@@ -76,13 +76,31 @@ export class UsersService {
     return user;
   }
 
+  /** Tạo ứng viên. */
+  createCandidate(data: CreateCandidateData): Promise<User> {
+    return this.create(this.users, { ...data, role: Role.CANDIDATE });
+  }
+
+  /** Tạo nhà tuyển dụng, chạy trong transaction của nơi gọi (cùng lúc tạo công ty). */
+  createRecruiter(data: CreateCandidateData, manager: EntityManager): Promise<User> {
+    return this.create(manager.getRepository(User), { ...data, role: Role.RECRUITER });
+  }
+
+  /** Gắn công ty cho nhà tuyển dụng, trong transaction của nơi gọi. */
+  async setCompany(userId: string, companyId: string, manager: EntityManager): Promise<void> {
+    await manager.getRepository(User).update(userId, { companyId });
+  }
+
   /**
-   * Tạo ứng viên. Email trùng trả 409 AUTH_EMAIL_TAKEN, kể cả khi hai request đăng ký
-   * cùng lúc vượt qua bước kiểm tra trước (ràng buộc unique trong DB chặn lần ghi thứ hai).
+   * Email trùng trả 409 AUTH_EMAIL_TAKEN, kể cả khi hai request đăng ký cùng lúc vượt qua
+   * bước kiểm tra trước (ràng buộc unique trong DB chặn lần ghi thứ hai).
    */
-  async createCandidate(data: CreateCandidateData): Promise<User> {
+  private async create(
+    repository: Repository<User>,
+    data: CreateCandidateData & { role: UserRole },
+  ): Promise<User> {
     try {
-      return await this.users.save(this.users.create({ ...data, role: Role.CANDIDATE }));
+      return await repository.save(repository.create(data));
     } catch (error) {
       if (isUniqueViolation(error, 'uq_users_email')) {
         throw new AppException(ErrorCode.AUTH_EMAIL_TAKEN);

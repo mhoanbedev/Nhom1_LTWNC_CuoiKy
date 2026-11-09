@@ -5,6 +5,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   registerCandidateSchema,
+  registerRecruiterSchema,
   updateMeSchema,
   USER_ROLES,
 } from '@ltwnc/shared';
@@ -12,6 +13,8 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export class RegisterCandidateDto extends createZodDto(registerCandidateSchema) {}
+
+export class RegisterRecruiterDto extends createZodDto(registerRecruiterSchema) {}
 
 export class LoginDto extends createZodDto(loginSchema) {}
 

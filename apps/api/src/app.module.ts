@@ -15,7 +15,9 @@ import { localeMiddleware } from './common/middleware/locale.middleware';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { appConfig } from './config/app.config';
+import { cloudinaryConfig } from './config/cloudinary.config';
 import { googleConfig } from './config/google.config';
+import { revalidateConfig } from './config/revalidate.config';
 import { rateLimitConfig } from './config/rate-limit.config';
 import { buildThrottlerOptions } from './common/rate-limit/rate-limit';
 import { databaseConfig } from './config/database.config';
@@ -23,6 +25,10 @@ import { jwtConfig } from './config/jwt.config';
 import { validateEnv } from './config/env.schema';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { RevalidateModule } from './infrastructure/revalidate/revalidate.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { CompaniesModule } from './modules/companies/companies.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -35,7 +41,15 @@ import { UsersModule } from './modules/users/users.module';
       // Chạy từ apps/api nên đọc apps/api/.env; trên Render không có file, env lấy từ dashboard.
       envFilePath: '.env',
       validate: validateEnv,
-      load: [appConfig, databaseConfig, jwtConfig, googleConfig, rateLimitConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        jwtConfig,
+        googleConfig,
+        rateLimitConfig,
+        cloudinaryConfig,
+        revalidateConfig,
+      ],
     }),
     I18nModule.forRoot({
       fallbackLanguage: DEFAULT_LOCALE,
@@ -51,10 +65,14 @@ import { UsersModule } from './modules/users/users.module';
       useFactory: (config: ConfigType<typeof rateLimitConfig>) => buildThrottlerOptions(config),
     }),
     DatabaseModule,
+    RevalidateModule,
     HealthModule,
     UsersModule,
     AuthModule,
     MetaModule,
+    CompaniesModule,
+    JobsModule,
+    AdminModule,
   ],
   providers: [
     // Khai bằng APP_* thay vì app.useGlobal*() để chạy cả trong test e2e và dùng được DI.

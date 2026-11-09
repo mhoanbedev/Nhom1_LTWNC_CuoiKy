@@ -130,7 +130,7 @@ Mô hình gồm 21 entity TypeORM, cùng kế thừa lớp trừu tượng AppBa
 | --- | --- | --- |
 | **User** | email (unique), passwordHash (null nếu chỉ đăng nhập Google), passwordChangedAt, name, role, status, preferredLocale, avatarUrl, companyId | companyId chỉ có với recruiter |
 | **Account** | userId, provider, providerAccountId | Liên kết OAuth, unique (provider, providerAccountId) |
-| **Company** | ownerId, status, rejectReason, logoUrl, logoPublicId, website, size, industryId, locationId, address, approvedAt |  |
+| **Company** | ownerId, status, rejectReason, logoUrl, logoPublicId, website, size, industryId, locationId, address, approvedAt | Unique (ownerId): mỗi recruiter một công ty. `size` là `1-10`, `11-50`, `51-200`, `201-500`, `500+` |
 | **CompanyTranslation** | companyId, locale, name, slug, description, searchText | Unique (companyId, locale) và (locale, slug) |
 | **Job** | shortId, companyId, status, isHidden, hiddenReason, workMode, isPaid, salaryMin, salaryMax, currency, locationId, address, quantity, expiresAt, publishedAt, closedAt | Index (status, isHidden, expiresAt), (companyId) |
 | **JobTranslation** | jobId, locale, title, slug, description, requirements, benefits, searchText | Nội dung dạng Markdown; index trigram trên searchText, viết bằng SQL trong migration vì decorator của TypeORM không khai báo được |
@@ -176,6 +176,7 @@ Các quy tắc dưới đây là "nghiệp vụ khó" của đề. Quy tắc nà
 - Khi còn PENDING: vẫn đăng nhập và sửa thông tin công ty được, nhưng tạo hay đăng tin trả 403 `COMPANY_NOT_APPROVED`.
 - Admin duyệt: công ty sang APPROVED, recruiter nhận thông báo `COMPANY_APPROVED`.
 - Admin từ chối: phải có lý do, công ty sang REJECTED. Recruiter sửa rồi gửi lại thì công ty về PENDING.
+- Duyệt công ty đã APPROVED thì giữ nguyên (idempotent). Từ chối công ty đã APPROVED là thu hồi duyệt: mọi tin của công ty thôi công khai.
 - Trang công ty công khai chỉ hiện khi APPROVED, còn lại trả 404.
 
 ### 5.2 Vòng đời tin tuyển
@@ -188,6 +189,10 @@ Các quy tắc dưới đây là "nghiệp vụ khó" của đề. Quy tắc nà
 | DRAFT | (xóa) | Recruiter | Chỉ xóa được bản nháp |
 
 Admin ẩn hoặc bỏ ẩn tin ở bất kỳ trạng thái nào, ẩn thì phải kèm lý do. Recruiter nhận thông báo `JOB_HIDDEN`.
+
+- Thiếu điều kiện đăng (bản `vi`, hạn ở tương lai, ít nhất 1 kỹ năng) thì 400 `JOB_INVALID_TRANSITION`, `details` liệt kê từng điều kiện còn thiếu (đã dịch theo ngôn ngữ). Công ty chưa duyệt thì 403 `COMPANY_NOT_APPROVED`. Hàm thuần `jobPublishBlockers` và bảng `JOB_TRANSITIONS` nằm trong `packages/shared` để frontend dùng lại.
+- Sửa tin đang PUBLISHED cũng phải giữ đủ điều kiện đăng (không đặt hạn đã qua, không bỏ hết kỹ năng).
+- Mở lại giữ `publishedAt` của lần đăng đầu, xóa `closedAt`. Đổi trạng thái dùng `UPDATE ... WHERE status = <trạng thái cũ>` nên bấm hai lần cùng lúc thì lần sau nhận 400.
 
 Tin được coi là công khai (hàm `isJobPublic(job, company, now)`) khi đủ 4 điều kiện: PUBLISHED, không bị ẩn, công ty APPROVED, `expiresAt > now`.
 
@@ -329,7 +334,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 
 | Method | Path | Quyền | Ghi chú |
 | --- | --- | --- | --- |
-| GET | /jobs | Guest | Lọc theo `q`, `skills[]`, `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` |
+| GET | /jobs | Guest | Lọc theo `q`, `skills` (`?skills=a&skills=b`, `?skills=a,b` hoặc `?skills[]=a`; khớp khi tin có ít nhất một kỹ năng), `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` (mặc định khi có `q`, theo `similarity` của pg_trgm) |
 | GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `isSaved`, `hasApplied` |
 | GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp |
 | GET | /companies | Guest |  |
@@ -525,7 +530,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | PROFILE\_INCOMPLETE | 400 | Chưa xong các bước hồ sơ bắt buộc |
 | CV\_INVALID | 400 | CV không thuộc ứng viên hoặc đã xóa |
 | CV\_LIMIT\_REACHED | 400 | Đã có 5 CV |
-| FILE\_INVALID\_TYPE | 400 | Không phải PDF |
+| FILE\_INVALID\_TYPE | 400 | Sai loại file (CV không phải PDF, ảnh không phải JPG/PNG/WebP); tham số `allowed` |
 | FILE\_TOO\_LARGE | 400 | Vượt 5 MB |
 | JOB\_INVALID\_TRANSITION | 400 | Chuyển trạng thái tin sai bảng 5.2 |
 | APPLICATION\_INVALID\_TRANSITION | 400 | Chuyển trạng thái đơn sai bảng 5.4 |
@@ -663,7 +668,7 @@ Backend phải cấp đủ dữ liệu và tín hiệu để frontend làm đư�
 
 | Thuộc tính JSON-LD | Lấy từ |
 | --- | --- |
-| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` đã render từ Markdown và đã sanitize |
+| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
 | datePosted, validThrough | `publishedAt`, `expiresAt` (ISO 8601) |
 | employmentType | Cố định `INTERN` |
 | identifier | `shortId` |
@@ -684,9 +689,9 @@ Mọi thay đổi dữ liệu công khai đều làm backend gọi `POST REVALID
 | Đăng, sửa, đóng, mở lại tin | `job:{id}`, `jobs:list`, `company:{companyId}`, `sitemap` |
 | Admin ẩn hoặc bỏ ẩn tin | Giống dòng trên |
 | Cron đóng tin hết hạn | `job:{id}` cho từng tin, `jobs:list`, `sitemap` |
-| Sửa trang công ty, admin duyệt công ty | `company:{id}`, `jobs:list`, `sitemap` |
+| Sửa trang công ty, đổi logo (công ty đã duyệt), admin duyệt hoặc thu hồi duyệt | `company:{id}`, `companies:list`, `jobs:list`, `sitemap` |
 
-Webhook gửi sau khi transaction đã commit, không chặn response, thử lại 3 lần; thất bại thì chỉ ghi log.
+Webhook gửi sau khi transaction đã commit, không chặn response, thử lại 3 lần (timeout 5 giây mỗi lần); thất bại thì chỉ ghi log. `REVALIDATE_URL` để trống thì không gọi (dev); `NODE_ENV=production` mà thiếu thì API không khởi động. Tên tag và header nằm trong `RevalidateTag`, `REVALIDATE_SECRET_HEADER` của `packages/shared`. Trang chi tiết tin gắn cả `job:{id}` lẫn `company:{companyId}`, để đổi tên hay logo công ty thì trang tin cũng được làm mới. Cron đóng tin chạy 0h05 mỗi ngày (giờ Việt Nam).
 
 ### Sitemap, hreflang, canonical
 
@@ -863,6 +868,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
 - [ ] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
 - [ ] `feat(shared): slugify và isJobPublic kèm test`
+- [ ] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
 - [ ] `feat(api): tin tuyển nháp của nhà tuyển dụng`
 - [ ] `feat(api): vòng đời tin đăng, đóng, mở lại`
 - [ ] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`

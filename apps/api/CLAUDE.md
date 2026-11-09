@@ -34,3 +34,5 @@
 | `make format` | Khi `make check` báo lỗi định dạng |
 
 Commit: Conventional Commits, scope `api` hoặc `shared`, mô tả tiếng Việt, mỗi commit một việc.
+
+**Không tự push, mở PR hay merge.** Commit trên máy, báo Hoàn cách test, đợi Hoàn test xong và nhắn đồng ý cho từng việc.

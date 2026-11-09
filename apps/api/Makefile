@@ -4,7 +4,7 @@
 # Dòng `target: ## mô tả` chính là nội dung của `make help`.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create seed
+.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create seed cloudinary-check
 
 ##@ Chung
 help: ## In danh sách lệnh
@@ -59,6 +59,10 @@ migration-create: ## Tạo migration rỗng để viết SQL tay: make migration
 seed: ## Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được
 	npm run build --prefix ../.. -w @ltwnc/shared
 	npm run seed
+
+cloudinary-check: ## Thử key Cloudinary: upload ảnh và PDF riêng tư vào folder dev-check, in link
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run cloudinary:check
 
 ##@ Phát triển
 dev: ## Chạy API ở chế độ watch (build packages/shared trước)
