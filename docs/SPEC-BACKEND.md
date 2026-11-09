@@ -497,7 +497,7 @@ Module chỉ ghi vào bảng của chính nó. Cần dữ liệu hoặc hành đ
 ### Validate và lỗi (nhóm 7)
 
 - Dùng `ZodValidationPipe` global, mọi body, query, param đều có DTO. Query số dùng `z.coerce`.
-- Mọi lỗi nghiệp vụ ném qua `AppException(code, status, params?)`. Filter tự map lỗi TypeORM: `QueryFailedError` mã `23505` (trùng unique) thành 409, mã `23503` (vi phạm khóa ngoại) thành 400, `EntityNotFoundError` thành 404.
+- Mọi lỗi nghiệp vụ ném qua `AppException(code, params?, details?)`; HTTP status suy ra từ mã lỗi (bảng `ERROR_HTTP_STATUS`) nên không ném nhầm status. Pipe validate cũng ném `AppException` `VALIDATION_FAILED`. Filter tự map lỗi TypeORM: `QueryFailedError` mã `23505` (trùng unique) thành 409 `CONFLICT`, mã `23503` (vi phạm khóa ngoại) thành 400 `INVALID_REFERENCE`, `EntityNotFoundError` thành 404; lỗi HTTP có sẵn của Nest (route không tồn tại, JSON hỏng) quy về mã tương ứng.
 - Response thành công là `{ data, meta? }`, do `TransformInterceptor` bọc.
 - Response lỗi thống nhất, `message` được dịch theo locale:
 
@@ -518,6 +518,8 @@ Lỗi validate trả `details: [{ field, message }]`.
 | Mã lỗi | HTTP | Khi nào |
 | --- | --- | --- |
 | VALIDATION\_FAILED | 400 | Body, query hoặc param sai |
+| BAD\_REQUEST | 400 | Yêu cầu hỏng không qua validate (vd JSON sai cú pháp) |
+| INVALID\_REFERENCE | 400 | Tham chiếu tới bản ghi không tồn tại (vi phạm khóa ngoại) |
 | JOB\_NOT\_ACCEPTING | 400 | Ứng tuyển vào tin đã đóng hoặc hết hạn |
 | PROFILE\_INCOMPLETE | 400 | Chưa xong các bước hồ sơ bắt buộc |
 | CV\_INVALID | 400 | CV không thuộc ứng viên hoặc đã xóa |
@@ -535,6 +537,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | FORBIDDEN | 403 | Sai vai trò hoặc không sở hữu tài nguyên |
 | COMPANY\_NOT\_APPROVED | 403 | Công ty chưa duyệt mà tạo/đăng tin |
 | NOT\_FOUND | 404 | Không tồn tại hoặc không được thấy |
+| CONFLICT | 409 | Trùng dữ liệu unique không có mã riêng |
 | AUTH\_EMAIL\_TAKEN | 409 | Email đã dùng |
 | APPLICATION\_DUPLICATE | 409 | Đã nộp vào tin này |
 | APPLICATION\_STATUS\_CONFLICT | 409 | Người khác vừa đổi trạng thái đơn |

@@ -25,11 +25,13 @@
     "migration:run:prod": "typeorm -d dist/database/data-source.js migration:run"
   },
   "dependencies": {
+    "@ltwnc/shared": "*",
     "@nestjs/common": "^11.2.8",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/typeorm": "^11.0.3",
+    "nestjs-zod": "^5.6.0",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

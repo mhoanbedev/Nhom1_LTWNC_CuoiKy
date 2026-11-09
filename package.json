@@ -13,11 +13,12 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run build -w @ltwnc/shared && npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "build:shared": "npm run build -w @ltwnc/shared",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "npm run build:shared && npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "format:check": "npm run format:check --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
     "dev:api": "npm run dev -w @ltwnc/api"
   },
