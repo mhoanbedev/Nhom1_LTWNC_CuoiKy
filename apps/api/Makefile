@@ -4,13 +4,13 @@
 # Dòng `target: ## mô tả` chính là nội dung của `make help`.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info
+.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create
 
 ##@ Chung
 help: ## In danh sách lệnh
 	@node scripts/make-help.mjs
 
-setup: install env up ## Lần đầu: cài dependency, tạo .env, bật Postgres
+setup: install env up migrate ## Lần đầu: cài dependency, tạo .env, bật Postgres, chạy migration
 	@node scripts/db-info.mjs
 
 env: ## Tạo .env từ .env.example hoặc bổ sung biến còn thiếu
@@ -37,6 +37,24 @@ db-shell: ## Mở psql trong container
 
 db-info: ## In thông số kết nối Postgres cho pgAdmin trên máy
 	@node scripts/db-info.mjs
+
+##@ Migration (TypeORM)
+migrate: ## Chạy các migration chưa chạy
+	npm run migration:run
+
+migrate-revert: ## Lùi migration gần nhất
+	npm run migration:revert
+
+migration-show: ## Liệt kê migration và trạng thái đã chạy
+	npm run migration:show
+
+migration-generate: ## Sinh migration từ thay đổi entity: make migration-generate name=AddJobIndex
+	$(if $(name),,$(error Thiếu tên: make migration-generate name=TenMoTa))
+	npm run migration:generate -- src/database/migrations/$(name)
+
+migration-create: ## Tạo migration rỗng để viết SQL tay: make migration-create name=TenMoTa
+	$(if $(name),,$(error Thiếu tên: make migration-create name=TenMoTa))
+	npm run migration:create -- src/database/migrations/$(name)
 
 ##@ Phát triển
 dev: ## Chạy API ở chế độ watch (build packages/shared trước)

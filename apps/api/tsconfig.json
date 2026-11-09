@@ -10,5 +10,9 @@
     "strictPropertyInitialization": false,
     "types": ["node", "jest"]
   },
-  "include": ["src", "test"]
+  "include": ["src", "test"],
+  "ts-node": {
+    // TypeORM CLI chạy migration qua ts-node; bỏ type-check cho nhanh (typecheck đã có script riêng).
+    "transpileOnly": true
+  }
 }
