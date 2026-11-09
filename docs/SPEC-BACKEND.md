@@ -35,7 +35,7 @@ Backend là một API NestJS độc lập (kiến trúc C), lo toàn bộ dữ l
 - File: Multer (memoryStorage, không ghi đĩa) + **Cloudinary**. Ảnh (logo, avatar) để công khai; CV để chế độ `authenticated` và chỉ tải được qua signed URL ngắn hạn (mục 5.5).
 - `@nestjs/swagger`, `@nestjs/schedule` (cron đóng tin hết hạn), `@nestjs/event-emitter` (việc chạy sau commit: revalidate, email), `@nestjs/throttler`, `helmet`.
 - Jest + supertest.
-- **Dev:** Docker Compose chạy PostgreSQL và **pgAdmin** để xem dữ liệu; mọi lệnh gọi qua **Makefile** (mục 10).
+- **Dev:** Docker Compose chỉ chạy PostgreSQL; xem dữ liệu bằng pgAdmin cài trên máy (`make db-info` in thông số kết nối); mọi lệnh gọi qua **Makefile** (mục 10).
 - **Deploy:** backend lên **Render** bằng Dockerfile, database production trên Neon; frontend lên Vercel.
 
 ### Repo và phân công
@@ -422,8 +422,7 @@ apps/api/
 ├── README.md                 cài đặt, chạy, tài khoản demo, link Swagger, link deploy
 ├── Makefile                  lệnh tắt cho mọi việc (mục 10)
 ├── Dockerfile                build production nhiều stage, dùng cho Render
-├── docker-compose.yml        PostgreSQL + pgAdmin cho môi trường dev
-├── docker/pgadmin/servers.json   cấu hình sẵn kết nối pgAdmin vào Postgres
+├── docker-compose.yml        PostgreSQL cho môi trường dev
 ├── .env.example
 ├── nest-cli.json, tsconfig.json, tsconfig.build.json
 ├── eslint.config.mjs, .prettierrc, jest.config.ts
@@ -498,7 +497,7 @@ Module chỉ ghi vào bảng của chính nó. Cần dữ liệu hoặc hành đ
 ### Validate và lỗi (nhóm 7)
 
 - Dùng `ZodValidationPipe` global, mọi body, query, param đều có DTO. Query số dùng `z.coerce`.
-- Mọi lỗi nghiệp vụ ném qua `AppException(code, status, params?)`. Filter tự map lỗi TypeORM: `QueryFailedError` mã `23505` (trùng unique) thành 409, mã `23503` (vi phạm khóa ngoại) thành 400, `EntityNotFoundError` thành 404.
+- Mọi lỗi nghiệp vụ ném qua `AppException(code, params?, details?)`; HTTP status suy ra từ mã lỗi (bảng `ERROR_HTTP_STATUS`) nên không ném nhầm status. Pipe validate cũng ném `AppException` `VALIDATION_FAILED`. Filter tự map lỗi TypeORM: `QueryFailedError` mã `23505` (trùng unique) thành 409 `CONFLICT`, mã `23503` (vi phạm khóa ngoại) thành 400 `INVALID_REFERENCE`, `EntityNotFoundError` thành 404; lỗi HTTP có sẵn của Nest (route không tồn tại, JSON hỏng) quy về mã tương ứng.
 - Response thành công là `{ data, meta? }`, do `TransformInterceptor` bọc.
 - Response lỗi thống nhất, `message` được dịch theo locale:
 
@@ -519,6 +518,8 @@ Lỗi validate trả `details: [{ field, message }]`.
 | Mã lỗi | HTTP | Khi nào |
 | --- | --- | --- |
 | VALIDATION\_FAILED | 400 | Body, query hoặc param sai |
+| BAD\_REQUEST | 400 | Yêu cầu hỏng không qua validate (vd JSON sai cú pháp) |
+| INVALID\_REFERENCE | 400 | Tham chiếu tới bản ghi không tồn tại (vi phạm khóa ngoại) |
 | JOB\_NOT\_ACCEPTING | 400 | Ứng tuyển vào tin đã đóng hoặc hết hạn |
 | PROFILE\_INCOMPLETE | 400 | Chưa xong các bước hồ sơ bắt buộc |
 | CV\_INVALID | 400 | CV không thuộc ứng viên hoặc đã xóa |
@@ -536,11 +537,13 @@ Lỗi validate trả `details: [{ field, message }]`.
 | FORBIDDEN | 403 | Sai vai trò hoặc không sở hữu tài nguyên |
 | COMPANY\_NOT\_APPROVED | 403 | Công ty chưa duyệt mà tạo/đăng tin |
 | NOT\_FOUND | 404 | Không tồn tại hoặc không được thấy |
+| CONFLICT | 409 | Trùng dữ liệu unique không có mã riêng |
 | AUTH\_EMAIL\_TAKEN | 409 | Email đã dùng |
 | APPLICATION\_DUPLICATE | 409 | Đã nộp vào tin này |
 | APPLICATION\_STATUS\_CONFLICT | 409 | Người khác vừa đổi trạng thái đơn |
 | TOO\_MANY\_REQUESTS | 429 | Vượt giới hạn tần suất |
 | INTERNAL\_ERROR | 500 | Lỗi không lường trước, không lộ stack trace |
+| SERVICE\_UNAVAILABLE | 503 | `/health` không kết nối được database (Render coi là server lỗi) |
 
 ### Cấu trúc NestJS (nhóm 6 và 7)
 
@@ -559,7 +562,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 
 - Bật `helmet`, CORS chỉ cho domain frontend (`FRONTEND_URL`), giới hạn kích thước body.
 - Validate biến môi trường bằng Zod lúc khởi động: thiếu biến thì app không chạy.
-- Swagger ở `/api/docs` có Bearer auth, mỗi module một tag, có ví dụ response.
+- Swagger ở `/api/docs` (file `/api/docs/openapi.json`) có Bearer auth, mỗi module một tag, response mô tả đúng dạng `{ data }` qua `@ApiDataResponse` và lỗi qua `@ApiErrorResponses`.
 - Mọi danh sách đều phân trang bằng `skip`/`take` và `findAndCount`. Chỉ `select` trường cần, nạp quan hệ bằng `relations` hoặc `leftJoinAndSelect` thay vì query trong vòng lặp, để tránh N+1.
 - `/meta/*` gửi `Cache-Control` 1 ngày.
 
@@ -569,7 +572,7 @@ Lỗi validate trả `details: [{ field, message }]`.
 | --- | --- |
 | App | `NODE_ENV`, `PORT`, `FRONTEND_URL` |
 | Database | `DATABASE_URL` (chuỗi pooled của Neon, app dùng), `DATABASE_DIRECT_URL` (chuỗi direct của Neon, chỉ migration dùng), `DB_SSL` (bật khi kết nối Neon) |
-| Docker dev | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD` |
+| Docker dev | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` |
 | Auth | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN` (15m), `REFRESH_TOKEN_EXPIRES_IN` (7d), `REFRESH_TOKEN_GRACE_SECONDS` (30), `GOOGLE_CLIENT_ID` |
 | Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
 | Revalidate | `REVALIDATE_URL`, `REVALIDATE_SECRET` |
@@ -715,13 +718,13 @@ Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chun
 
 Mock repository bằng `getRepositoryToken(Entity)` trong `Test.createTestingModule`. Chạy `jest --coverage` và chụp báo cáo coverage đưa vào báo cáo mục e.
 
-### Docker và pgAdmin
+### Docker và xem dữ liệu
 
 Docker chỉ lo database khi dev; API chạy trực tiếp trên máy bằng `make dev` để có hot reload.
 
-- **postgres:** image `postgres:16-alpine`, cổng 5432 chỉ bind 127.0.0.1, volume `pgdata` để dữ liệu không mất khi tắt container, healthcheck bằng `pg_isready`.
-- **pgadmin:** image `dpage/pgadmin4`, mở ở `http://localhost:5050`, đăng nhập bằng `PGADMIN_DEFAULT_EMAIL` và `PGADMIN_DEFAULT_PASSWORD`. Mount `docker/pgadmin/servers.json` để server Postgres hiện sẵn, không phải tự khai báo. Trong pgAdmin, host là `postgres` (tên service), không phải `localhost`.
-- API trên máy kết nối qua `DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/<db>`.
+- **postgres:** image `postgres:16-alpine`, cổng 5435 trên máy (biến `POSTGRES_PORT`, vì 5432–5434 đã có Postgres khác trên máy dùng) chỉ bind 127.0.0.1, volume `pgdata` để dữ liệu không mất khi tắt container, healthcheck bằng `pg_isready`.
+- Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, host `localhost`, cổng `5435`, user/mật khẩu/database theo `.env`. `make db-info` in sẵn các thông số này.
+- API trên máy kết nối qua `DATABASE_URL=postgresql://<user>:<pass>@localhost:5435/<db>`.
 - Extension `pg_trgm` và `unaccent` tạo trong migration đầu tiên bằng `CREATE EXTENSION IF NOT EXISTS`, để local và Render giống nhau.
 
 ### Makefile
@@ -731,7 +734,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | Lệnh | Việc làm |
 | --- | --- |
 | `make setup` | Lần đầu: cài dependency, tạo `.env` từ `.env.example` nếu chưa có, bật Docker, chạy migration, seed |
-| `make up` / `make down` | Bật / tắt Postgres và pgAdmin |
+| `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
 | `make logs` | Xem log container |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -744,7 +747,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make seed` | Seed dữ liệu demo |
 | `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
 | `make db-shell` | Mở `psql` trong container |
-| `make pgadmin` | In URL và tài khoản pgAdmin |
+| `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
 | `make docker-build` | Build image production giống Render để thử trước khi deploy |
 
 ### Triển khai backend lên Render
@@ -813,7 +816,7 @@ Trong quyển báo cáo, bạn viết các phần: kiến trúc và sơ đồ CS
 
 Làm theo 8 bước dưới đây, mục tiêu xong backend trong vài ngày. Mỗi bước làm trên một nhánh `feat/api-<bước>` và chia thành việc nhỏ ở checklist bên dưới: mỗi việc là một commit, `make check` xanh thì commit và push ngay; xong bước thì mở pull request vào `main`. Bàn giao Swagger dạng khung ngay sau bước 1 để nhóm frontend không phải chờ.
 
-1. **Khởi tạo monorepo và nền tảng:** npm workspaces, `packages/shared`, khung `apps/api` theo cấu trúc mục 8, `CLAUDE.md`, `CONVENTIONS.md`, `Makefile`, `docker-compose.yml` (Postgres + pgAdmin), validate env, `data-source.ts`, AppBaseEntity, migration đầu tiên (extension pg\_trgm, unaccent); entity thêm dần ở bước dùng đến. Phần common: filter, interceptor, guard, decorator, AppException, i18n, Swagger, `/health`.
+1. **Khởi tạo monorepo và nền tảng:** npm workspaces, `packages/shared`, khung `apps/api` theo cấu trúc mục 8, `CLAUDE.md`, `CONVENTIONS.md`, `Makefile`, `docker-compose.yml` (Postgres), validate env, `data-source.ts`, AppBaseEntity, migration đầu tiên (extension pg\_trgm, unaccent); entity thêm dần ở bước dùng đến. Phần common: filter, interceptor, guard, decorator, AppException, i18n, Swagger, `/health`.
 2. **Auth, Users, Meta:** đăng ký, đăng nhập, Google, refresh token xoay vòng, đăng xuất, khóa tài khoản; seed admin, kỹ năng, tỉnh/thành.
 3. **Companies và Jobs:** CloudinaryService, bản dịch, slug, logo trên Cloudinary, vòng đời tin, tìm kiếm công khai, webhook revalidate, cron đóng tin hết hạn.
 4. **Profiles và CV:** 4 bước hồ sơ, upload CV lên Cloudinary, tải bằng signed URL có kiểm quyền.
@@ -831,7 +834,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [ ] `chore: khởi tạo monorepo npm workspaces`: package.json gốc, .nvmrc, .editorconfig, .gitignore, README khung
 - [ ] `feat(shared): khung packages/shared`: build TypeScript, enum, kiểu Locale
 - [ ] `chore(api): khung NestJS`: tsconfig strict, ESLint, Prettier, Jest
-- [ ] `chore(api): Makefile, script Node, docker-compose Postgres + pgAdmin`
+- [ ] `chore(api): Makefile, script Node, docker-compose Postgres`
 - [ ] `feat(api): config và validate env bằng Zod`
 - [ ] `feat(api): TypeORM data-source, AppBaseEntity, migration extension`
 - [ ] `feat(api): AppException, mã lỗi, filter và interceptor`

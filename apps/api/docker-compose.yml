@@ -1,0 +1,25 @@
+# Hạ tầng dev: chỉ chạy PostgreSQL. API chạy trực tiếp trên máy bằng `make dev`.
+# Xem dữ liệu bằng pgAdmin (hoặc DBeaver...) cài trên máy; `make db-info` in thông số kết nối.
+name: ltwnc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ltwnc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ltwnc}
+      POSTGRES_DB: ${POSTGRES_DB:-ltwnc}
+    ports:
+      # Chỉ bind 127.0.0.1 để máy khác trong mạng không truy cập được.
+      - '127.0.0.1:${POSTGRES_PORT:-5435}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

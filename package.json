@@ -11,5 +11,25 @@
     "node": ">=24 <25",
     "npm": ">=10"
   },
-  "scripts": {}
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w @ltwnc/shared",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "npm run build:shared && npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "dev:api": "npm run dev -w @ltwnc/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.1"
+  }
 }

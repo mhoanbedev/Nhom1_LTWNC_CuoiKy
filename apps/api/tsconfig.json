@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "types": ["node", "jest"]
+  },
+  "include": ["src", "test"],
+  "ts-node": {
+    // TypeORM CLI chạy migration qua ts-node; bỏ type-check cho nhanh (typecheck đã có script riêng).
+    "transpileOnly": true
+  }
+}
