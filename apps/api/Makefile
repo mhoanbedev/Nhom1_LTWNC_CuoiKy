@@ -4,13 +4,13 @@
 # Dòng `target: ## mô tả` chính là nội dung của `make help`.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create
+.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create seed
 
 ##@ Chung
 help: ## In danh sách lệnh
 	@node scripts/make-help.mjs
 
-setup: install env up migrate ## Lần đầu: cài dependency, tạo .env, bật Postgres, chạy migration
+setup: install env up migrate seed ## Lần đầu: cài dependency, tạo .env, bật Postgres, chạy migration, seed
 	@node scripts/db-info.mjs
 
 env: ## Tạo .env từ .env.example hoặc bổ sung biến còn thiếu
@@ -55,6 +55,10 @@ migration-generate: ## Sinh migration từ thay đổi entity: make migration-ge
 migration-create: ## Tạo migration rỗng để viết SQL tay: make migration-create name=TenMoTa
 	$(if $(name),,$(error Thiếu tên: make migration-create name=TenMoTa))
 	npm run migration:create -- src/database/migrations/$(name)
+
+seed: ## Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run seed
 
 ##@ Phát triển
 dev: ## Chạy API ở chế độ watch (build packages/shared trước)

@@ -28,6 +28,7 @@
 | `make dev` | Chạy API ở `http://localhost:4000/api/v1`, Swagger `/api/docs` |
 | `make migration-generate name=TenMoTa` | Sau khi sửa entity |
 | `make migrate` | Chạy migration |
+| `make seed` | Seed danh mục và admin (`admin@demo.vn` / `Demo@2026`) |
 | `make check` | **Sau mỗi thay đổi**; sửa đến khi xanh (format, lint, typecheck, test) |
 | `make test-e2e` | Khi đổi controller, guard, filter, pipe |
 | `make format` | Khi `make check` báo lỗi định dạng |

@@ -1,0 +1,5 @@
+{
+  "PASSWORD_LETTER_AND_DIGIT": "Password must contain both letters and digits",
+  "PASSWORD_SAME_AS_CURRENT": "The new password must be different from the current one",
+  "AT_LEAST_ONE_FIELD": "Send at least one field to update"
+}

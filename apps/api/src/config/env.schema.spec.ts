@@ -5,9 +5,24 @@ const validEnv = {
   PORT: '4000',
   FRONTEND_URL: 'http://localhost:3000',
   DATABASE_URL: 'postgresql://ltwnc:ltwnc@localhost:5435/ltwnc',
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
 };
 
 describe('validateEnv', () => {
+  it('báo lỗi khi JWT_ACCESS_SECRET ngắn hơn 32 ký tự', () => {
+    expect(() => validateEnv({ ...validEnv, JWT_ACCESS_SECRET: 'ngan' })).toThrow(
+      /JWT_ACCESS_SECRET/,
+    );
+  });
+
+  it('mặc định JWT_ACCESS_EXPIRES_IN là 15m và từ chối dạng sai', () => {
+    expect(validateEnv(validEnv).JWT_ACCESS_EXPIRES_IN).toBe('15m');
+    expect(() => validateEnv({ ...validEnv, JWT_ACCESS_EXPIRES_IN: '15 phút' })).toThrow(
+      /JWT_ACCESS_EXPIRES_IN/,
+    );
+  });
+
   it('chấp nhận env hợp lệ và ép PORT thành số', () => {
     const env = validateEnv(validEnv);
     expect(env.PORT).toBe(4000);

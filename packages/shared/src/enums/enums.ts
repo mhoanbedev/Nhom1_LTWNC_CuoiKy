@@ -18,6 +18,16 @@ export const Role = {
 } as const;
 export type Role = ValueOf<typeof Role>;
 
+/** Vai trò lưu trong DB (không có GUEST). */
+export type UserRole = Exclude<Role, typeof Role.GUEST>;
+export const USER_ROLES: readonly UserRole[] = [Role.CANDIDATE, Role.RECRUITER, Role.ADMIN];
+
+/** Nhà cung cấp đăng nhập ngoài. */
+export const OAuthProvider = {
+  GOOGLE: 'google',
+} as const;
+export type OAuthProvider = ValueOf<typeof OAuthProvider>;
+
 export const UserStatus = {
   ACTIVE: 'ACTIVE',
   LOCKED: 'LOCKED',
