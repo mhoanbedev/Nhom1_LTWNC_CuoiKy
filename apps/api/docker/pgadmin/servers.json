@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "LTWNC (Docker)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "ltwnc",
+      "Username": "ltwnc",
+      "SSLMode": "prefer"
+    }
+  }
+}
