@@ -11,5 +11,9 @@
     "node": ">=24 <25",
     "npm": ">=10"
   },
-  "scripts": {}
+  "scripts": {},
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3"
+  }
 }
