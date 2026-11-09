@@ -238,6 +238,7 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Upload lên Cloudinary bằng `upload_stream` từ buffer, với `resource_type: 'raw'`, `type: 'authenticated'`, `folder: 'cvs/<candidateId>'`, `public_id` là uuid ngẫu nhiên. DB chỉ lưu `cloudinaryPublicId`, không lưu URL công khai vì CV không có URL công khai.
 - Tải về: `GET /files/cvs/:id` kiểm quyền theo mục 2, rồi trả `{ url, expiresAt }` với `url` sinh bằng `cloudinary.utils.private_download_url` hết hạn sau 60 giây.
 - Xóa CV là xóa mềm trong DB, file trên Cloudinary giữ lại. CV đã gắn vào đơn thì nhà tuyển dụng vẫn tải được.
+- DB có index unique `uq_cv_files_one_default` (một CV mặc định cho mỗi ứng viên trong số CV chưa xóa). Upload, đặt mặc định, xóa đều khóa dòng user của ứng viên trong transaction, nên upload đồng thời không vượt 5 CV; file đã upload mà không lưu được thì bị xóa khỏi Cloudinary. Tên file tiếng Việt được đổi lại sang UTF-8 (Multer đọc tên theo latin1).
 - Ảnh logo và avatar: `type: 'upload'` (công khai), chỉ nhận jpg/png/webp tối đa 2 MB, resize khi upload. Lưu `secure_url` và `publicId`; đổi ảnh thì xóa ảnh cũ trên Cloudinary.
 - **Việc phải làm khi tạo tài khoản Cloudinary:** gói miễn phí mặc định chặn giao file PDF và ZIP. Vào Settings → Security bật "Allow delivery of PDF and ZIP files", nếu không link tải CV sẽ lỗi.
 - Mọi thao tác Cloudinary đi qua một `CloudinaryService` duy nhất ở `src/infrastructure/cloudinary/`, các module khác không gọi SDK trực tiếp. Trong test thì mock service này.
