@@ -4,7 +4,7 @@
 # Dòng `target: ## mô tả` chính là nội dung của `make help`.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create seed seed-demo cloudinary-check mail-check
+.PHONY: help setup env install up down logs ps dev build start lint lint-fix format format-check typecheck test test-watch test-cov test-e2e check db-shell db-info migrate migrate-revert migration-show migration-generate migration-create seed seed-demo seed-demo-yes db-reset openapi close-expired-jobs cloudinary-check mail-check
 
 ##@ Chung
 help: ## In danh sách lệnh
@@ -20,10 +20,10 @@ install: ## Cài dependency (chạy ở gốc monorepo)
 	npm install --prefix ../..
 
 ##@ Docker (PostgreSQL)
-up: ## Bật Postgres
+up: ## Bật Postgres và Mailpit
 	docker compose up -d --wait
 
-down: ## Tắt Postgres (giữ dữ liệu)
+down: ## Tắt Postgres và Mailpit (giữ dữ liệu)
 	docker compose down
 
 logs: ## Xem log container
@@ -71,6 +71,23 @@ seed-demo-yes: ## Như seed-demo nhưng không hỏi xác nhận (make setup dù
 cloudinary-check: ## Thử key Cloudinary: upload ảnh và PDF riêng tư vào folder dev-check, in link
 	npm run build --prefix ../.. -w @ltwnc/shared
 	npm run cloudinary:check
+
+db-reset: ## XÓA SẠCH DB dev rồi dựng lại (migration, danh mục, admin, dữ liệu demo); hỏi xác nhận
+	node scripts/confirm.mjs db-reset
+	docker compose down -v
+	docker compose up -d --wait
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run migration:run
+	npm run seed
+	npm run seed:demo -- --yes
+
+close-expired-jobs: ## Đóng ngay các tin đã hết hạn (việc cron làm lúc 0h05)
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run jobs:close-expired
+
+openapi: ## Ghi tài liệu OpenAPI ra openapi.json (chạy lại mỗi khi đổi API rồi commit)
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run openapi
 
 mail-check: ## Gửi một email thử qua SMTP trong .env (dev: xem ở Mailpit http://localhost:8025)
 	npm run build --prefix ../.. -w @ltwnc/shared

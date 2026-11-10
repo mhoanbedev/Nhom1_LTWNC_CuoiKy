@@ -781,7 +781,9 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make migrate` / `make migrate-revert` | Chạy / lùi migration |
 | `make seed` | Seed danh mục và tài khoản admin |
 | `make seed-demo` | Xóa rồi tạo lại dữ liệu demo (hỏi xác nhận) |
-| `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
+| `make db-reset` | Xóa volume, bật lại DB, migrate, seed danh mục và dữ liệu demo (hỏi xác nhận) |
+| `make close-expired-jobs` | Đóng ngay các tin hết hạn (việc cron làm lúc 0h05) |
+| `make openapi` | Ghi `apps/api/openapi.json` từ code; test e2e báo lỗi nếu file cũ |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
 | `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit) |

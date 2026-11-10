@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
@@ -55,7 +55,11 @@ function useSecurityHeaders(app: INestApplication): void {
   });
 }
 
-function setupSwagger(app: INestApplication): void {
+/**
+ * Tài liệu OpenAPI của toàn bộ API. Dùng chung cho trang Swagger (`/api/docs`) và `make openapi`
+ * (ghi ra `openapi.json`), để file trong repo và trang Swagger không thể lệch nhau.
+ */
+export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('Cổng tuyển dụng thực tập – API')
     .setDescription(
@@ -68,10 +72,12 @@ function setupSwagger(app: INestApplication): void {
     .setVersion('1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
     .build();
-
-  const document = SwaggerModule.createDocument(app, config);
   // cleanupOpenApiDoc: hoàn thiện schema sinh từ DTO Zod (nestjs-zod).
-  SwaggerModule.setup(SWAGGER_PATH, app, cleanupOpenApiDoc(document), {
+  return cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));
+}
+
+function setupSwagger(app: INestApplication): void {
+  SwaggerModule.setup(SWAGGER_PATH, app, buildOpenApiDocument(app), {
     jsonDocumentUrl: `${SWAGGER_PATH}/openapi.json`,
     swaggerOptions: { persistAuthorization: true },
   });
