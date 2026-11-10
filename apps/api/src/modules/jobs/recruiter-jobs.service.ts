@@ -31,6 +31,7 @@ import { JobSkill } from './entities/job-skill.entity';
 import { JobTranslation } from './entities/job-translation.entity';
 import { Job } from './entities/job.entity';
 import { toRecruiterJob, toRecruiterJobListItem } from './job.mapper';
+import { isViewable } from './public-jobs.service';
 
 const SHORT_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const SHORT_ID_LENGTH = 6;
@@ -253,8 +254,14 @@ export class RecruiterJobsService {
       where: { id, companyId: requireCompany(companyId) },
       relations: { translations: true, skills: true },
     });
-    if (!job) throw new AppException(ErrorCode.NOT_FOUND);
-    return job;
+    if (job) return job;
+    // Tin của công ty khác (mục 2 của đặc tả): đang có trang công khai thì 403 (ai cũng xem được
+    // nên không lộ gì); nháp, bị ẩn, công ty chưa duyệt hay không tồn tại thì 404 (không lộ tin có thật).
+    const other = await manager.getRepository(Job).findOne({
+      where: { id },
+      relations: { company: true },
+    });
+    throw new AppException(other && isViewable(other) ? ErrorCode.FORBIDDEN : ErrorCode.NOT_FOUND);
   }
 
   private async uniqueShortId(manager: EntityManager): Promise<string> {

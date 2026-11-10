@@ -26,7 +26,9 @@
     "seed": "ts-node src/database/seeds/index.ts",
     "seed:demo": "ts-node src/database/seeds/seed-demo.ts",
     "cloudinary:check": "ts-node src/infrastructure/cloudinary/cloudinary-check.ts",
-    "mail:check": "ts-node src/infrastructure/mail/mail-check.ts"
+    "mail:check": "ts-node src/infrastructure/mail/mail-check.ts",
+    "openapi": "ts-node src/openapi/export-openapi.ts",
+    "jobs:close-expired": "ts-node src/modules/jobs/close-expired-jobs.cli.ts"
   },
   "dependencies": {
     "@ltwnc/shared": "*",

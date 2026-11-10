@@ -34,6 +34,9 @@ Gõ `make` để xem đầy đủ.
 | `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit `http://localhost:8025`) |
 | `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
 | `make seed-demo` | Xóa rồi tạo lại dữ liệu demo (mọi tài khoản `@demo.vn` trừ admin); hỏi xác nhận trước khi xóa |
+| `make db-reset` | **Xóa sạch** DB dev (cả dữ liệu tự tạo) rồi dựng lại: migration, danh mục, admin, dữ liệu demo; hỏi xác nhận |
+| `make close-expired-jobs` | Đóng ngay các tin đã hết hạn (việc cron làm lúc 0h05), để demo không phải đợi |
+| `make openapi` | Ghi tài liệu OpenAPI ra `openapi.json`; chạy lại mỗi khi đổi API rồi commit |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
 | `make lint` / `make format` / `make typecheck` | Kiểm tra và định dạng code |
@@ -63,6 +66,16 @@ Tài khoản demo sau `make seed` và `make seed-demo` (mật khẩu chung `Demo
 Ngoài ra có 10 nhà tuyển dụng `hr<n>@demo.vn` và 298 ứng viên `ungvien<nnn>@demo.vn`, cùng mật khẩu. Dữ liệu tạo bằng Faker với seed cố định nên lần nào chạy cũng giống nhau; tạo lại thì mọi tài khoản `@demo.vn` (trừ admin) bị xóa, dữ liệu bạn tự tạo bằng email khác được giữ. CV demo dùng chung 3 file PDF mẫu trên Cloudinary (folder `seed/`).
 
 Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).
+
+## OpenAPI (cho nhóm frontend)
+
+`apps/api/openapi.json` là tài liệu OpenAPI 3 của toàn bộ API, giống hệt trang Swagger `/api/docs`, commit sẵn trong repo nên đọc được mà không cần chạy backend. Dùng để sinh kiểu TypeScript cho frontend, ví dụ:
+
+```bash
+npx openapi-typescript apps/api/openapi.json -o apps/web/src/lib/api-schema.d.ts
+```
+
+Kiểu dùng chung (enum, schema Zod, kiểu response, hàm như `buildJobPostingJsonLd`) thì import thẳng từ `@ltwnc/shared`, không cần sinh. Đổi API (route, DTO, decorator Swagger) thì chạy `make openapi` rồi commit; test e2e `openapi` báo lỗi nếu file đã cũ.
 
 ## Webhook revalidate (cho nhóm frontend)
 

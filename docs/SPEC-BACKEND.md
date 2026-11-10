@@ -50,7 +50,8 @@ Nhom1_LTWNC_CuoiKy/
 ├── packages/
 │   └── shared/       enum, schema Zod, kiểu response, hàm nghiệp vụ thuần — Hoàn duy trì
 ├── docs/
-│   └── SPEC-BACKEND.md   tài liệu này
+│   ├── SPEC-BACKEND.md   tài liệu này
+│   └── FRONTEND-GUIDE.md những điểm frontend phải khớp với backend
 ├── CLAUDE.md         luật chung cho Claude CLI ở cấp monorepo
 ├── package.json      script gốc, khai báo npm workspaces
 ├── package-lock.json     lock chung cho cả monorepo
@@ -748,7 +749,8 @@ Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chun
 | Unit hàm thuần | `canTransition` cho mọi cặp trạng thái và actor; `matchScore` (không có kỹ năng, khớp hết, chỉ khớp kỹ năng ưu tiên); `isJobPublic` ở biên `expiresAt` = now; `isPdfBuffer`; `buildJobPostingJsonLd` (REMOTE và ONSITE, có và không lương); hàm tạo slug tiếng Việt |
 | Service, mock repository | `ApplicationsService.apply`: 5 nhánh lỗi và nhánh thành công; `changeStatus`: sai công ty, chuyển sai, xung đột; `JobsService.publish` khi công ty chưa duyệt; `CvsService` với file quá 5 MB và file không phải PDF |
 | E2E (supertest, DB test riêng) | Không token trả 401; candidate gọi API recruiter trả 403; recruiter công ty A xem đơn công ty B trả 404; body sai trả 400 đúng format; tải CV người khác trả 404 |
-| Đồng thời | Hai request nộp đơn chạy cùng lúc bằng `Promise.all`: một cái 201, một cái 409 |
+| Phân quyền (`test/permissions.e2e-spec.ts`) | Đọc metadata `@Public`/`@Roles` của **mọi** route đang đăng ký và so với quy ước theo đường dẫn (`/admin/*` chỉ ADMIN, `/recruiter/*` chỉ RECRUITER, `/me/*` của ứng viên chỉ CANDIDATE...); route mới quên `@Roles` hay lỡ `@Public` thì test fail. Gọi thật mọi route bảo vệ: không token 401, sai vai trò 403. Quyền sở hữu: tin công khai của công ty khác 403, tin nháp 404; đơn, ghi chú, CV, thông báo của người khác 404; admin không tải được CV |
+| Đồng thời (`test/concurrency.e2e-spec.ts` và các file module) | Nộp đơn 2 lần, lưu hồ sơ, đổi trạng thái đơn, refresh token cùng lúc; đăng ký trùng email (một 201, còn lại 409); admin duyệt công ty hay ẩn tin nhiều lần cùng lúc chỉ gửi 1 thông báo; ứng viên rút đơn đúng lúc nhà tuyển dụng đổi trạng thái (một bên thắng, lịch sử không chồng); lưu tin, đăng tin, đọc tất cả thông báo cùng lúc |
 
 Mock repository bằng `getRepositoryToken(Entity)` trong `Test.createTestingModule`. Chạy `jest --coverage` và chụp báo cáo coverage đưa vào báo cáo mục e.
 
@@ -780,7 +782,9 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make migrate` / `make migrate-revert` | Chạy / lùi migration |
 | `make seed` | Seed danh mục và tài khoản admin |
 | `make seed-demo` | Xóa rồi tạo lại dữ liệu demo (hỏi xác nhận) |
-| `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
+| `make db-reset` | Xóa volume, bật lại DB, migrate, seed danh mục và dữ liệu demo (hỏi xác nhận) |
+| `make close-expired-jobs` | Đóng ngay các tin hết hạn (việc cron làm lúc 0h05) |
+| `make openapi` | Ghi `apps/api/openapi.json` từ code; test e2e báo lỗi nếu file cũ |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
 | `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit) |
@@ -930,11 +934,11 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 
 **Bước 8 – Hoàn thiện** (`feat/api-release`)
 
-- [ ] `feat(api): seed đầy đủ dữ liệu demo`
-- [ ] `test(api): e2e phân quyền và test đồng thời`
-- [ ] `chore(api): Dockerfile`
-- [ ] Deploy lên Render + Neon: tạo project Neon, Render và điền env production ở bước này
-- [ ] `docs: README và openapi.json`
+- [x] `feat(api): seed đầy đủ dữ liệu demo`
+- [x] `test(api): e2e phân quyền và test đồng thời`
+- [ ] `chore(api): Dockerfile` (hoãn: hiện chỉ cần chạy dev, chưa deploy)
+- [ ] Deploy lên Render + Neon: tạo project Neon, Render và điền env production ở bước này (hoãn: hiện chỉ cần chạy dev)
+- [x] `docs: README và openapi.json` (kèm `docs/FRONTEND-GUIDE.md`, khung `apps/web` trống)
 
 **Việc ngoài code** (không chặn việc code):
 
