@@ -271,7 +271,7 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
-- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). `JOB_HIDDEN` nối vào khi làm chức năng ẩn tin.
+- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
 - Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
 
 ### 5.9 Thống kê
@@ -405,9 +405,9 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | PATCH | /admin/companies/:id/approve |  |
 | PATCH | /admin/companies/:id/reject | Body `{ reason }` |
 | GET | /admin/jobs | Lọc theo `q`, `status`, `hidden` |
-| PATCH | /admin/jobs/:id/hide, /unhide | hide cần `{ reason }` |
+| PATCH | /admin/jobs/:id/hide, /unhide | hide cần `{ reason }`. Ẩn lại tin đang ẩn: 200, giữ lý do cũ, không báo lại (muốn đổi lý do thì bỏ ẩn rồi ẩn lại). Bỏ ẩn tin không bị ẩn: 200 |
 | GET | /admin/users | Lọc theo `role`, `status`, `q` |
-| PATCH | /admin/users/:id/lock, /unlock | Không khóa được chính mình (400 CANNOT\_LOCK\_SELF); hệ thống chỉ có 1 admin |
+| PATCH | /admin/users/:id/lock, /unlock | Không khóa được chính mình (400 CANNOT\_LOCK\_SELF); hệ thống chỉ có 1 admin. Khóa thu hồi mọi refresh token cùng transaction; khóa/mở lặp lại vẫn 200. Khóa nhà tuyển dụng **không** ẩn tin của công ty (muốn gỡ nội dung thì ẩn tin hoặc thu hồi duyệt công ty) |
 | GET | /admin/stats | `?days=30` |
 
 ### SEO và hệ thống
@@ -873,30 +873,30 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 
 **Bước 3 – Companies, Jobs** (`feat/api-jobs`)
 
-- [ ] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
-- [ ] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
-- [ ] `feat(shared): slugify và isJobPublic kèm test`
-- [ ] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
-- [ ] `feat(api): tin tuyển nháp của nhà tuyển dụng`
-- [ ] `feat(api): vòng đời tin đăng, đóng, mở lại`
-- [ ] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`
-- [ ] `feat(api): webhook revalidate và cron đóng tin hết hạn`
+- [x] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
+- [x] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
+- [x] `feat(shared): slugify và isJobPublic kèm test`
+- [x] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
+- [x] `feat(api): tin tuyển nháp của nhà tuyển dụng`
+- [x] `feat(api): vòng đời tin đăng, đóng, mở lại`
+- [x] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`
+- [x] `feat(api): webhook revalidate và cron đóng tin hết hạn`
 
 **Bước 4 – Profiles, CV** (`feat/api-profiles`)
 
-- [ ] `feat(shared): schema 4 bước hồ sơ`
-- [ ] `feat(api): hồ sơ ứng viên 4 bước`
-- [ ] `feat(api): upload, đặt mặc định, xóa CV`
-- [ ] `feat(api): tải CV bằng signed URL`
-- [ ] `feat(api): avatar và tin đã lưu`
+- [x] `feat(shared): schema 4 bước hồ sơ`
+- [x] `feat(api): hồ sơ ứng viên 4 bước`
+- [x] `feat(api): upload, đặt mặc định, xóa CV`
+- [x] `feat(api): tải CV bằng signed URL`
+- [x] `feat(api): avatar và tin đã lưu`
 
 **Bước 5 – Applications** (`feat/api-applications`)
 
-- [ ] `feat(shared): canTransition kèm test`
-- [ ] `feat(api): nộp đơn, chống nộp trùng`
-- [ ] `feat(api): chuyển trạng thái, lịch sử, rút đơn`
-- [ ] `feat(api): ghi chú nội bộ`
-- [ ] `feat(api): thông báo`
+- [x] `feat(shared): canTransition kèm test`
+- [x] `feat(api): nộp đơn, chống nộp trùng`
+- [x] `feat(api): chuyển trạng thái, lịch sử, rút đơn`
+- [x] `feat(api): ghi chú nội bộ`
+- [x] `feat(api): thông báo`
 
 **Bước 6 – Admin, SEO** (`feat/api-admin-seo`)
 

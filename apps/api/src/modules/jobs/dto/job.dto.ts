@@ -1,5 +1,7 @@
 import {
+  adminJobsQuerySchema,
   createJobSchema,
+  hideJobSchema,
   CURRENCIES,
   JobStatus,
   recruiterJobsQuerySchema,
@@ -65,6 +67,28 @@ export class RecruiterJobListItemDto extends createZodDto(
     hasEnglish: z.boolean(),
     expiresAt: datetime,
     publishedAt: datetime,
+    updatedAt: z.iso.datetime(),
+  }),
+) {}
+
+export class AdminJobsQueryDto extends createZodDto(adminJobsQuerySchema) {}
+
+export class HideJobDto extends createZodDto(hideJobSchema) {}
+
+/** Chỉ để mô tả trên Swagger; kiểu thật là AdminJob trong @ltwnc/shared. */
+export class AdminJobDto extends createZodDto(
+  z.object({
+    id: z.uuid(),
+    shortId: z.string(),
+    status,
+    isHidden: z.boolean(),
+    hiddenReason: z.string().nullable(),
+    title: z.string().meta({ description: 'Tiêu đề bản vi' }),
+    titleEn: z.string().nullable(),
+    company: z.object({ id: z.uuid(), name: z.string().meta({ description: 'Tên bản vi' }) }),
+    expiresAt: datetime,
+    publishedAt: datetime,
+    createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   }),
 ) {}

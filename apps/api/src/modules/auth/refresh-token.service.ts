@@ -83,8 +83,9 @@ export class RefreshTokenService {
   }
 
   /** Đăng xuất mọi thiết bị; cũng dùng khi đổi mật khẩu hoặc bị admin khóa. */
-  async revokeAllForUser(userId: string): Promise<void> {
-    await this.tokens.update({ userId, revokedAt: IsNull() }, { revokedAt: new Date() });
+  async revokeAllForUser(userId: string, manager?: EntityManager): Promise<void> {
+    const tokens = manager ? manager.getRepository(RefreshToken) : this.tokens;
+    await tokens.update({ userId, revokedAt: IsNull() }, { revokedAt: new Date() });
   }
 
   /** Xóa token đã hết hạn quá `olderThanSeconds`; cron chạy hằng ngày. Trả số dòng đã xóa. */

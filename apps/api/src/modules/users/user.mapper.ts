@@ -1,4 +1,4 @@
-import type { AuthUser } from '@ltwnc/shared';
+import type { AdminUser, AuthUser } from '@ltwnc/shared';
 import type { RequestUser } from '../../common/types/request-user';
 import type { User } from './entities/user.entity';
 
@@ -23,5 +23,21 @@ export function toRequestUser(user: User): RequestUser {
     role: user.role,
     companyId: user.companyId,
     preferredLocale: user.preferredLocale,
+  };
+}
+
+/** Entity (kèm `company.translations` nếu là nhà tuyển dụng) → tài khoản trong màn quản trị. */
+export function toAdminUser(user: User): AdminUser {
+  const company = user.company;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    status: user.status,
+    company: company
+      ? { id: company.id, name: company.translations?.find((t) => t.locale === 'vi')?.name ?? '' }
+      : null,
+    createdAt: user.createdAt.toISOString(),
   };
 }

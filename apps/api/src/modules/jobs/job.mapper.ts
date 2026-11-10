@@ -1,5 +1,6 @@
 import {
   ErrorCode,
+  type AdminJob,
   type JobTranslation as JobTranslationDto,
   type RecruiterJob,
   type RecruiterJobListItem,
@@ -70,6 +71,26 @@ export function toRecruiterJobListItem(job: Job): RecruiterJobListItem {
     hasEnglish: job.translations?.some((t) => t.locale === 'en') ?? false,
     expiresAt: iso(job.expiresAt),
     publishedAt: iso(job.publishedAt),
+    updatedAt: job.updatedAt.toISOString(),
+  };
+}
+
+/** Entity (kèm `translations`, `company.translations`) → tin trong màn quản trị. */
+export function toAdminJob(job: Job): AdminJob {
+  const en = job.translations?.find((t) => t.locale === 'en');
+  const companyName = job.company?.translations?.find((t) => t.locale === 'vi')?.name ?? '';
+  return {
+    id: job.id,
+    shortId: job.shortId,
+    status: job.status,
+    isHidden: job.isHidden,
+    hiddenReason: job.hiddenReason,
+    title: viTranslation(job).title,
+    titleEn: en?.title ?? null,
+    company: { id: job.companyId, name: companyName },
+    expiresAt: iso(job.expiresAt),
+    publishedAt: iso(job.publishedAt),
+    createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   };
 }

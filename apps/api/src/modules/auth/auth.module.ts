@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { jwtConfig } from '../../config/jwt.config';
 import { CompaniesModule } from '../companies/companies.module';
 import { UsersModule } from '../users/users.module';
+import { AccountLockService } from './account-lock.service';
 import { AccountsService } from './accounts.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -35,12 +36,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   providers: [
     AuthService,
     AccountsService,
+    AccountLockService,
     GoogleIdTokenVerifier,
     PasswordService,
     RefreshTokenService,
     RefreshTokenCleanupTask,
     JwtStrategy,
   ],
-  exports: [RefreshTokenService],
+  exports: [RefreshTokenService, AccountLockService],
 })
 export class AuthModule {}
