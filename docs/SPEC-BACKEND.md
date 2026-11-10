@@ -726,7 +726,7 @@ Webhook gửi sau khi transaction đã commit, không chặn response, thử l�
 
 ### Seed dữ liệu
 
-Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chung `data-source.ts` với app. Script chạy lại được nhiều lần: dữ liệu demo xóa sạch rồi tạo lại; danh mục (kỹ năng, ngành, tỉnh/thành) thì upsert theo `slug`/`code` để id không đổi; admin lấy email và mật khẩu từ `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` và chỉ cập nhật chính tài khoản admin có sẵn (DB có index `uq_users_single_admin` chặn admin thứ hai). Dùng `@faker-js/faker` với seed cố định để lần nào dữ liệu cũng giống nhau. Mật khẩu demo dùng chung và ghi trong README.
+Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chung `data-source.ts` với app. Dữ liệu demo tách sang `make seed-demo` (hỏi xác nhận vì có xóa; `make setup` chạy cả hai). Script chạy lại được nhiều lần: dữ liệu demo (mọi tài khoản `@demo.vn` trừ admin, kèm công ty, tin, đơn của họ) xóa sạch rồi tạo lại, dữ liệu tự tạo bằng email khác giữ nguyên; danh mục (kỹ năng, ngành, tỉnh/thành) thì upsert theo `slug`/`code` để id không đổi; admin lấy email và mật khẩu từ `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` và chỉ cập nhật chính tài khoản admin có sẵn (DB có index `uq_users_single_admin` chặn admin thứ hai). Dùng `@faker-js/faker` với seed cố định để lần nào dữ liệu cũng giống nhau. Mật khẩu demo dùng chung và ghi trong README.
 
 | Dữ liệu | Số lượng | Ghi chú |
 | --- | --- | --- |
@@ -737,7 +737,7 @@ Lệnh `make seed` chạy script TypeORM trong `src/database/seeds/`, dùng chun
 | Đơn ứng tuyển | Trên 600 | Đủ 6 trạng thái, có lịch sử và ghi chú. Một tin của `recruiter@demo.vn` có trên 250 đơn để demo danh sách dài |
 | Kỹ năng | Khoảng 60 | Song ngữ |
 | Tỉnh/thành | 34 | Song ngữ |
-| CV mẫu | Vài file PDF nhỏ | Đặt trong `src/database/seeds/assets/`, upload lên Cloudinary (folder `seed/`) với `public_id` cố định và `overwrite`, nên chạy seed lại không sinh file rác |
+| CV mẫu | 3 file PDF nhỏ | Dựng bằng code (`seeds/demo/demo-cv.ts`), upload lên Cloudinary (folder `seed/`) với `public_id` cố định, nên chạy seed lại không sinh file rác. Mọi CV demo dùng chung 3 file; an toàn vì xóa CV chỉ là xóa mềm, không xóa file trên Cloudinary |
 
 ### Kiểm thử backend
 
@@ -778,7 +778,8 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
 | `make migration-create name=CreateExtensions` | Tạo migration rỗng để viết SQL tay |
 | `make migrate` / `make migrate-revert` | Chạy / lùi migration |
-| `make seed` | Seed dữ liệu demo |
+| `make seed` | Seed danh mục và tài khoản admin |
+| `make seed-demo` | Xóa rồi tạo lại dữ liệu demo (hỏi xác nhận) |
 | `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
