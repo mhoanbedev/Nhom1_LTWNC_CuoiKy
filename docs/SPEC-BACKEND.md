@@ -50,7 +50,8 @@ Nhom1_LTWNC_CuoiKy/
 ├── packages/
 │   └── shared/       enum, schema Zod, kiểu response, hàm nghiệp vụ thuần — Hoàn duy trì
 ├── docs/
-│   └── SPEC-BACKEND.md   tài liệu này
+│   ├── SPEC-BACKEND.md   tài liệu này
+│   └── FRONTEND-GUIDE.md những điểm frontend phải khớp với backend
 ├── CLAUDE.md         luật chung cho Claude CLI ở cấp monorepo
 ├── package.json      script gốc, khai báo npm workspaces
 ├── package-lock.json     lock chung cho cả monorepo
@@ -937,7 +938,7 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 - [x] `test(api): e2e phân quyền và test đồng thời`
 - [ ] `chore(api): Dockerfile` (hoãn: hiện chỉ cần chạy dev, chưa deploy)
 - [ ] Deploy lên Render + Neon: tạo project Neon, Render và điền env production ở bước này (hoãn: hiện chỉ cần chạy dev)
-- [ ] `docs: README và openapi.json`
+- [x] `docs: README và openapi.json` (kèm `docs/FRONTEND-GUIDE.md`, khung `apps/web` trống)
 
 **Việc ngoài code** (không chặn việc code):
 
