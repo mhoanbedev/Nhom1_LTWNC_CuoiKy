@@ -18,6 +18,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { localizedText } from '../../common/utils/localized-text';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { Job } from '../jobs/entities/job.entity';
+import { ApplicationStatusEmailService } from './application-status-email.service';
 import { ApplicationTransitionService } from './application-transition.service';
 import {
   toNotes,
@@ -39,6 +40,7 @@ export class RecruiterApplicationsService {
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
     @InjectRepository(ApplicationNote) private readonly notes: Repository<ApplicationNote>,
     private readonly transitions: ApplicationTransitionService,
+    private readonly statusEmails: ApplicationStatusEmailService,
   ) {}
 
   /** Đơn của một tin, mới nộp lên trước; lọc theo `status`. */
@@ -95,6 +97,8 @@ export class RecruiterApplicationsService {
         },
       },
     });
+    // Sau khi đổi trạng thái đã commit (409 thì đã ném lỗi ở trên, không tới đây).
+    this.statusEmails.notify(application, input.to, input.note ?? null);
     return this.get(companyId, id, lang);
   }
 

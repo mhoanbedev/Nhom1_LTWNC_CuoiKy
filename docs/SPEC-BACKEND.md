@@ -35,7 +35,7 @@ Backend là một API NestJS độc lập (kiến trúc C), lo toàn bộ dữ l
 - File: Multer (memoryStorage, không ghi đĩa) + **Cloudinary**. Ảnh (logo, avatar) để công khai; CV để chế độ `authenticated` và chỉ tải được qua signed URL ngắn hạn (mục 5.5).
 - `@nestjs/swagger`, `@nestjs/schedule` (cron đóng tin hết hạn), `@nestjs/event-emitter` (việc chạy sau commit: revalidate, email), `@nestjs/throttler`, `helmet`.
 - Jest + supertest.
-- **Dev:** Docker Compose chỉ chạy PostgreSQL; xem dữ liệu bằng pgAdmin cài trên máy (`make db-info` in thông số kết nối); mọi lệnh gọi qua **Makefile** (mục 10).
+- **Dev:** Docker Compose chạy PostgreSQL và Mailpit (hộp thư giả để xem email); xem dữ liệu bằng pgAdmin cài trên máy (`make db-info` in thông số kết nối); mọi lệnh gọi qua **Makefile** (mục 10).
 - **Deploy:** backend lên **Render** bằng Dockerfile, database production trên Neon; frontend lên Vercel.
 
 ### Repo và phân công
@@ -278,7 +278,9 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
 - Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do), admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
-- Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
+- Email (tùy chọn): gửi khi nhà tuyển dụng chuyển đơn sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale` của ứng viên (câu chữ trong `src/i18n/<lang>/mail.json`). Gửi sau khi đổi trạng thái đã commit (409 hay chuyển sai thì không gửi), chạy nền, không chặn request; lỗi SMTP chỉ ghi log.
+  - Gửi qua SMTP bằng `nodemailer`, lớp tích hợp duy nhất là `infrastructure/mail` (`MailService`). Dev dùng Mailpit trong docker-compose (SMTP `localhost:1025`, xem thư tại `http://localhost:8025`); gửi thật thì chỉ đổi biến `SMTP_*`, `MAIL_FROM`. `SMTP_HOST` để trống thì tắt email. `make mail-check` gửi một email thử.
+  - Nội dung: lời chào, câu theo trạng thái (kèm tên tin, tên công ty theo ngôn ngữ), lời nhắn của nhà tuyển dụng nếu có, nút "Xem chi tiết". Bản HTML escape mọi giá trị người dùng nhập. Link tạm trỏ về `FRONTEND_URL/{locale}` cho tới khi frontend chốt route trang đơn của ứng viên.
 
 ### 5.9 Thống kê
 
@@ -480,7 +482,7 @@ apps/api/
     ├── infrastructure/       tích hợp bên ngoài, mỗi thứ một module
     │   ├── cloudinary/       upload, xóa, sinh signed URL
     │   ├── revalidate/       gọi webhook revalidate của Next
-    │   └── mail/             tùy chọn
+    │   └── mail/             gửi email qua SMTP (dev: Mailpit)
     ├── i18n/                 vi/*.json, en/*.json
     └── modules/
         ├── auth/   users/   companies/   jobs/   profiles/   cvs/
@@ -766,7 +768,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | Lệnh | Việc làm |
 | --- | --- |
 | `make setup` | Lần đầu: cài dependency, tạo `.env` từ `.env.example` nếu chưa có, bật Docker, chạy migration, seed |
-| `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
+| `make up` / `make down` | Bật / tắt Postgres và Mailpit (giữ dữ liệu) |
 | `make logs` | Xem log container |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -780,6 +782,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
+| `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit) |
 | `make docker-build` | Build image production giống Render để thử trước khi deploy |
 
 ### Triển khai backend lên Render

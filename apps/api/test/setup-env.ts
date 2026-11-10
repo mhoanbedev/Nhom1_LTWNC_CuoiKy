@@ -14,6 +14,8 @@ const testEnv: Record<string, string> = {
   // Rất cao để các test khác không bị 429; test giới hạn tần suất tự đặt mức thấp.
   RATE_LIMIT_AUTH_PER_MINUTE: '100000',
   RATE_LIMIT_LOGIN_PER_EMAIL: '100000',
+  // Tắt email trong test (dù .env trên máy có Mailpit); test email thay MailService bằng bản giả.
+  SMTP_HOST: '',
 };
 
 for (const [key, value] of Object.entries(testEnv)) {

@@ -4,6 +4,7 @@ import { ApplicationActor, ApplicationStatus, ErrorCode, NotificationType } from
 import { AppException } from '../../common/exceptions/app.exception';
 import { Job } from '../jobs/entities/job.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ApplicationStatusEmailService } from './application-status-email.service';
 import { ApplicationTransitionService } from './application-transition.service';
 import { ApplicationNote } from './entities/application-note.entity';
 import { ApplicationStatusHistory } from './entities/application-status-history.entity';
@@ -27,6 +28,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
   };
   const applications = { findOne: jest.fn<Promise<Application | null>, [object]>() };
   const notifications = { create: jest.fn<Promise<void>, [unknown, string, object]>() };
+  const statusEmails = { notify: jest.fn<void, [Application, string, string | null]>() };
   let transitions: ApplicationTransitionService;
   let service: RecruiterApplicationsService;
 
@@ -42,6 +44,7 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
         { provide: getRepositoryToken(Job), useValue: {} },
         { provide: getRepositoryToken(ApplicationNote), useValue: {} },
         { provide: NotificationsService, useValue: notifications },
+        { provide: ApplicationStatusEmailService, useValue: statusEmails },
       ],
     }).compile();
     transitions = moduleRef.get(ApplicationTransitionService);
@@ -157,5 +160,34 @@ describe('changeStatus (ApplicationTransitionService + RecruiterApplicationsServ
         candidateName: null,
       },
     });
+    // Email chỉ gọi sau khi đổi trạng thái xong; service email tự lọc trạng thái cần gửi.
+    expect(statusEmails.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app-1' }),
+      'REVIEWING',
+      'Đã xem CV',
+    );
+  });
+
+  it('đổi trạng thái lỗi (409) thì không gọi email', async () => {
+    applications.findOne.mockResolvedValue({
+      ...submitted,
+      status: ApplicationStatus.REVIEWING,
+      jobId: 'job-1',
+      candidateId: 'candidate-1',
+      job: { translations: [{ locale: 'vi', title: 'Thực tập' }] },
+    } as Application);
+    applicationRepo.update.mockResolvedValue({ affected: 0 });
+    expect(
+      await codeOf(
+        service.changeStatus(
+          'hr-1',
+          'company-a',
+          'app-1',
+          { to: ApplicationStatus.INTERVIEW },
+          'vi',
+        ),
+      ),
+    ).toBe(ErrorCode.APPLICATION_STATUS_CONFLICT);
+    expect(statusEmails.notify).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { Job } from '../jobs/entities/job.entity';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
+import { ApplicationStatusEmailService } from './application-status-email.service';
 import { ApplicationTransitionService } from './application-transition.service';
 import { ApplicationsService } from './applications.service';
 import { CandidateApplicationsController } from './candidate-applications.controller';
@@ -23,7 +24,12 @@ import { RecruiterApplicationsService } from './recruiter-applications.service';
     NotificationsModule,
   ],
   controllers: [CandidateApplicationsController, RecruiterApplicationsController],
-  providers: [ApplicationsService, RecruiterApplicationsService, ApplicationTransitionService],
+  providers: [
+    ApplicationsService,
+    RecruiterApplicationsService,
+    ApplicationTransitionService,
+    ApplicationStatusEmailService,
+  ],
   exports: [ApplicationsService],
 })
 export class ApplicationsModule {}
