@@ -43,6 +43,17 @@ export const PUBLIC_JOB_RELATIONS = {
 } as const;
 const DETAIL_RELATIONS = PUBLIC_JOB_RELATIONS;
 
+/**
+ * Điều kiện SQL của tin công khai (isJobPublic): PUBLISHED, không ẩn, còn hạn, công ty APPROVED.
+ * Câu truy vấn phải đặt alias `job` cho tin và `company` cho công ty; tham số lấy từ publicJobParams.
+ */
+export const PUBLIC_JOB_CONDITION =
+  'job.status = :published AND job.isHidden = false AND job.expiresAt > :now AND company.status = :approved';
+
+export function publicJobParams(now = new Date()) {
+  return { published: JobStatus.PUBLISHED, approved: CompanyStatus.APPROVED, now };
+}
+
 /** Tin còn trang công khai (200): không phải nháp, không bị ẩn, công ty đã duyệt. */
 export function isViewable(job: Job): boolean {
   return (
@@ -149,10 +160,7 @@ export class PublicJobsService {
       .innerJoin('job.company', 'company')
       .innerJoin('job.translations', 'tv', "tv.locale = 'vi'")
       .leftJoin('job.translations', 'tl', 'tl.locale = :lang', { lang })
-      .where('job.status = :published', { published: JobStatus.PUBLISHED })
-      .andWhere('job.isHidden = false')
-      .andWhere('job.expiresAt > :now', { now: new Date() })
-      .andWhere('company.status = :approved', { approved: CompanyStatus.APPROVED });
+      .where(PUBLIC_JOB_CONDITION, publicJobParams());
   }
 
   private async page(

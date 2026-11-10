@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CompaniesModule } from '../companies/companies.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { JobSkill } from './entities/job-skill.entity';
 import { JobTranslation } from './entities/job-translation.entity';
 import { PublicJobsController } from './public-jobs.controller';
@@ -11,11 +12,16 @@ import { SavedJobsController } from './saved-jobs.controller';
 import { SavedJobsService } from './saved-jobs.service';
 import { JobExpiryService } from './job-expiry.service';
 import { JobExpiryTask } from './job-expiry.task';
+import { JobsAdminService } from './jobs-admin.service';
 import { RecruiterJobsController } from './recruiter-jobs.controller';
 import { RecruiterJobsService } from './recruiter-jobs.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Job, JobTranslation, JobSkill, SavedJob]), CompaniesModule],
+  imports: [
+    TypeOrmModule.forFeature([Job, JobTranslation, JobSkill, SavedJob]),
+    CompaniesModule,
+    NotificationsModule,
+  ],
   controllers: [RecruiterJobsController, PublicJobsController, SavedJobsController],
   providers: [
     RecruiterJobsService,
@@ -23,6 +29,8 @@ import { RecruiterJobsService } from './recruiter-jobs.service';
     SavedJobsService,
     JobExpiryService,
     JobExpiryTask,
+    JobsAdminService,
   ],
+  exports: [JobsAdminService],
 })
 export class JobsModule {}

@@ -271,13 +271,16 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
-- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). `JOB_HIDDEN` nối vào khi làm chức năng ẩn tin.
+- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do), admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
 - Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
 
 ### 5.9 Thống kê
 
 - **Admin:** số tin theo trạng thái, số đơn theo trạng thái, số đơn theo ngày trong 30 ngày gần nhất, top 5 công ty nhận nhiều đơn nhất, số công ty đang chờ duyệt.
 - **Recruiter:** với mỗi tin của công ty mình, số đơn theo từng trạng thái.
+- Module `stats` chỉ đọc (join, `GROUP BY`), không ghi bảng nào. Mọi trạng thái luôn có mặt trong response, bằng 0 nếu không có.
+- `GET /admin/stats?days=30` (`days` 1–365): số tin, số đơn theo trạng thái tính trên toàn bộ dữ liệu (tin bị ẩn đếm riêng ở `hidden`); số đơn theo ngày và top 5 công ty tính trong `days` ngày. Ngày chia theo giờ Việt Nam, đủ `days` ngày tới hôm nay, ngày không có đơn là 0. Tên công ty theo `?lang`, thiếu bản dịch thì dùng `vi`.
+- `GET /recruiter/stats`: mọi tin của công ty (kể cả nháp, bị ẩn), mới tạo trước, mỗi tin có `total` và `byStatus`; kèm `totals` cộng dồn.
 
 ## 6. Xác thực
 
@@ -405,17 +408,17 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | PATCH | /admin/companies/:id/approve |  |
 | PATCH | /admin/companies/:id/reject | Body `{ reason }` |
 | GET | /admin/jobs | Lọc theo `q`, `status`, `hidden` |
-| PATCH | /admin/jobs/:id/hide, /unhide | hide cần `{ reason }` |
+| PATCH | /admin/jobs/:id/hide, /unhide | hide cần `{ reason }`. Ẩn lại tin đang ẩn: 200, giữ lý do cũ, không báo lại (muốn đổi lý do thì bỏ ẩn rồi ẩn lại). Bỏ ẩn tin không bị ẩn: 200 |
 | GET | /admin/users | Lọc theo `role`, `status`, `q` |
-| PATCH | /admin/users/:id/lock, /unlock | Không khóa được chính mình (400 CANNOT\_LOCK\_SELF); hệ thống chỉ có 1 admin |
+| PATCH | /admin/users/:id/lock, /unlock | Không khóa được chính mình (400 CANNOT\_LOCK\_SELF); hệ thống chỉ có 1 admin. Khóa thu hồi mọi refresh token cùng transaction; khóa/mở lặp lại vẫn 200. Khóa nhà tuyển dụng **không** ẩn tin của công ty (muốn gỡ nội dung thì ẩn tin hoặc thu hồi duyệt công ty) |
 | GET | /admin/stats | `?days=30` |
 
 ### SEO và hệ thống
 
 | Method | Path | Ghi chú |
 | --- | --- | --- |
-| GET | /seo/sitemap | Tin và công ty công khai, slug theo từng ngôn ngữ, `updatedAt` |
-| GET | /seo/static-params | Tham số type (job hoặc company) và limit (mặc định 100), dùng cho generateStaticParams |
+| GET | /seo/sitemap | Công khai. Tin đang công khai và công ty đã duyệt, slug theo từng ngôn ngữ, `updatedAt` |
+| GET | /seo/static-params | Công khai. `type` (job hoặc company, bắt buộc), `limit` 1–1000 (mặc định 100): tin mới đăng nhất hoặc công ty mới duyệt nhất, trả `{ locale, slug }[]` (mỗi bản dịch một cặp), dùng cho generateStaticParams |
 | GET | /health | Kiểm tra kết nối DB |
 
 ## 8. Chuẩn kỹ thuật
@@ -475,7 +478,7 @@ apps/api/
     ├── i18n/                 vi/*.json, en/*.json
     └── modules/
         ├── auth/   users/   companies/   jobs/   profiles/   cvs/
-        └── applications/   notifications/   admin/   meta/   seo/   health/
+        └── applications/   notifications/   admin/   stats/   meta/   seo/   health/
 ```
 
 Mọi module trong `modules/` có cùng bố cục: file để phẳng ở gốc thư mục module, chỉ tách `entities/` và `dto/`. Ví dụ module `applications`:
@@ -672,19 +675,23 @@ Backend phải cấp đủ dữ liệu và tín hiệu để frontend làm đư�
 
 ### Dữ liệu cho JSON-LD JobPosting
 
-`GET /jobs/:slug` trả đủ trường để dựng JobPosting qua Rich Results Test. Hàm dựng `buildJobPostingJsonLd(job, locale)` đặt trong `packages/shared`, có unit test, và frontend chỉ việc gọi.
+`GET /jobs/:slug` trả đủ trường để dựng JobPosting qua Rich Results Test. Hàm dựng `buildJobPostingJsonLd(job)` đặt trong `packages/shared`, có unit test, và frontend chỉ việc gọi; ngôn ngữ lấy từ `job.locale`.
+
+- Tin không được index (`seo.indexable: false`: đã đóng, hết hạn) thì hàm trả `null`, vì Google phạt trang có JobPosting đã hết hạn. Frontend chỉ nhúng khi có kết quả.
+- Nhúng bằng `serializeJsonLd(data)` (cũng trong `packages/shared`), không dùng `JSON.stringify` trực tiếp: hàm escape `<` để nội dung chứa `</script>` không phá thẻ script (XSS).
 
 | Thuộc tính JSON-LD | Lấy từ |
 | --- | --- |
-| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
+| title, description | Bản dịch theo locale; description ghép mô tả, yêu cầu, quyền lợi (có tiêu đề mục theo ngôn ngữ), trống hết thì dùng tiêu đề. Backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
 | datePosted, validThrough | `publishedAt`, `expiresAt` (ISO 8601) |
 | employmentType | Cố định `INTERN` |
-| identifier | `shortId` |
+| identifier | `PropertyValue` tên công ty + `shortId` |
 | hiringOrganization | Tên công ty, `website` làm sameAs, URL logo tuyệt đối |
-| jobLocation | Địa chỉ, tỉnh/thành, `addressCountry: VN`; bỏ qua nếu REMOTE |
+| jobLocation | Địa chỉ, tỉnh/thành, `addressCountry: VN`; bỏ qua nếu REMOTE (HYBRID vẫn có) |
 | jobLocationType, applicantLocationRequirements | Khi REMOTE: `TELECOMMUTE` và quốc gia Việt Nam |
-| baseSalary | Khi `isPaid`: VND, `minValue`, `maxValue`, đơn vị MONTH |
+| baseSalary | Khi `isPaid` và có ít nhất một mức: `currency` của tin, `minValue`, `maxValue` (mức nào có thì ghi), đơn vị MONTH |
 | directApply | `true` |
+| inLanguage, skills | `locale` của trang; tên các kỹ năng ngăn cách bằng dấu phẩy |
 
 Cùng response đó cũng đủ cho `opengraph-image.tsx`: tiêu đề, tên công ty, logo, địa điểm, hình thức làm việc, có lương hay không.
 
@@ -703,7 +710,7 @@ Webhook gửi sau khi transaction đã commit, không chặn response, thử l�
 
 ### Sitemap, hreflang, canonical
 
-- `/seo/sitemap` trả mảng `{ type: 'job' | 'company', updatedAt, alternates: { locale, slug }[] }`. Chỉ gồm tin đang công khai, còn hạn, và công ty APPROVED.
+- `/seo/sitemap` trả mảng `{ type: 'job' | 'company', id, updatedAt, alternates: { locale, slug }[] }`. Chỉ gồm tin đang công khai (đủ 4 điều kiện `isJobPublic`) và công ty APPROVED. `id` khớp cache tag; `updatedAt` là mốc sửa mới nhất của bản ghi và các bản dịch (sửa riêng bản `en` cũng đổi `lastmod`); `alternates` chỉ gồm ngôn ngữ đã có, `vi` đứng đầu.
 - Frontend sinh mỗi URL cho từng locale có bản dịch, kèm `alternates.languages` và `x-default` trỏ về bản `vi`.
 - Canonical của mỗi trang trỏ về chính URL của nó theo ngôn ngữ. Không phát sinh URL `en` cho tin chưa có bản `en`, vì `alternates` chỉ liệt kê ngôn ngữ đã có.
 
@@ -873,37 +880,37 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 
 **Bước 3 – Companies, Jobs** (`feat/api-jobs`)
 
-- [ ] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
-- [ ] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
-- [ ] `feat(shared): slugify và isJobPublic kèm test`
-- [ ] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
-- [ ] `feat(api): tin tuyển nháp của nhà tuyển dụng`
-- [ ] `feat(api): vòng đời tin đăng, đóng, mở lại`
-- [ ] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`
-- [ ] `feat(api): webhook revalidate và cron đóng tin hết hạn`
+- [x] `feat(api): CloudinaryService`: lấy key Cloudinary ở bước này
+- [x] `feat(api): công ty, đăng ký nhà tuyển dụng, logo`
+- [x] `feat(shared): slugify và isJobPublic kèm test`
+- [x] `feat(api): admin duyệt, từ chối công ty, phân trang dùng chung` (làm sớm từ bước Admin để test được đăng tin)
+- [x] `feat(api): tin tuyển nháp của nhà tuyển dụng`
+- [x] `feat(api): vòng đời tin đăng, đóng, mở lại`
+- [x] `feat(api): tìm kiếm, chi tiết tin, trang công ty công khai`
+- [x] `feat(api): webhook revalidate và cron đóng tin hết hạn`
 
 **Bước 4 – Profiles, CV** (`feat/api-profiles`)
 
-- [ ] `feat(shared): schema 4 bước hồ sơ`
-- [ ] `feat(api): hồ sơ ứng viên 4 bước`
-- [ ] `feat(api): upload, đặt mặc định, xóa CV`
-- [ ] `feat(api): tải CV bằng signed URL`
-- [ ] `feat(api): avatar và tin đã lưu`
+- [x] `feat(shared): schema 4 bước hồ sơ`
+- [x] `feat(api): hồ sơ ứng viên 4 bước`
+- [x] `feat(api): upload, đặt mặc định, xóa CV`
+- [x] `feat(api): tải CV bằng signed URL`
+- [x] `feat(api): avatar và tin đã lưu`
 
 **Bước 5 – Applications** (`feat/api-applications`)
 
-- [ ] `feat(shared): canTransition kèm test`
-- [ ] `feat(api): nộp đơn, chống nộp trùng`
-- [ ] `feat(api): chuyển trạng thái, lịch sử, rút đơn`
-- [ ] `feat(api): ghi chú nội bộ`
-- [ ] `feat(api): thông báo`
+- [x] `feat(shared): canTransition kèm test`
+- [x] `feat(api): nộp đơn, chống nộp trùng`
+- [x] `feat(api): chuyển trạng thái, lịch sử, rút đơn`
+- [x] `feat(api): ghi chú nội bộ`
+- [x] `feat(api): thông báo`
 
 **Bước 6 – Admin, SEO** (`feat/api-admin-seo`)
 
-- [ ] `feat(api): duyệt công ty, ẩn tin, khóa user`
-- [ ] `feat(api): thống kê admin và nhà tuyển dụng`
-- [ ] `feat(shared): buildJobPostingJsonLd kèm test`
-- [ ] `feat(api): /seo/sitemap và /seo/static-params`
+- [x] `feat(api): duyệt công ty, ẩn tin, khóa user`
+- [x] `feat(api): thống kê admin và nhà tuyển dụng`
+- [x] `feat(shared): buildJobPostingJsonLd kèm test`
+- [x] `feat(api): /seo/sitemap và /seo/static-params`
 
 **Bước 7 – Nâng cao** (`feat/api-advanced`)
 

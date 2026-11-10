@@ -1,12 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ErrorCode, Role, type AvatarResult, type Locale, type UserRole } from '@ltwnc/shared';
+import {
+  ErrorCode,
+  Role,
+  type AdminUser,
+  type AdminUsersQuery,
+  type AvatarResult,
+  type Locale,
+  type Paginated,
+  type UserRole,
+  type UserStatus,
+} from '@ltwnc/shared';
 import { EntityManager, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { paginate, toSkipTake } from '../../common/utils/paginate';
+import { escapeLike } from '../../common/utils/search';
 import { assertImageFile, type UploadedFileLike } from '../../common/files/image-file';
 import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service';
 import { isUniqueViolation } from '../../database/pg-errors';
 import { User } from './entities/user.entity';
+import { toAdminUser } from './user.mapper';
 
 export interface CreateCandidateData {
   email: string;
@@ -104,6 +117,55 @@ export class UsersService {
     const user = await this.users.findOneBy({ id });
     if (!user) throw new AppException(ErrorCode.NOT_FOUND);
     return user;
+  }
+
+  /**
+   * Danh sách tài khoản cho admin, mới đăng ký lên trước. `q` tìm chuỗi con trong email hoặc tên
+   * (không phân biệt hoa thường; tên phải gõ đúng dấu vì bảng users không có cột search_text).
+   */
+  async listForAdmin(query: AdminUsersQuery): Promise<Paginated<AdminUser>> {
+    const builder = this.users
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.company', 'company')
+      .leftJoinAndSelect('company.translations', 'companyTranslation')
+      .orderBy('user.createdAt', 'DESC')
+      .addOrderBy('user.id', 'ASC');
+    if (query.role) builder.andWhere('user.role = :role', { role: query.role });
+    if (query.status) builder.andWhere('user.status = :status', { status: query.status });
+    if (query.q) {
+      builder.andWhere('(user.email ILIKE :q OR user.name ILIKE :q)', {
+        q: `%${escapeLike(query.q)}%`,
+      });
+    }
+    const { skip, take } = toSkipTake(query);
+    const [rows, total] = await builder.skip(skip).take(take).getManyAndCount();
+    return paginate(rows.map(toAdminUser), total, query);
+  }
+
+  /** Một tài khoản cho admin. Không tồn tại thì 404. */
+  async findForAdmin(id: string): Promise<AdminUser> {
+    const user = await this.users.findOne({
+      where: { id },
+      relations: { company: { translations: true } },
+    });
+    if (!user) throw new AppException(ErrorCode.NOT_FOUND);
+    return toAdminUser(user);
+  }
+
+  /**
+   * Đổi trạng thái (khóa/mở khóa) trong transaction của nơi gọi. Chỉ ghi khi trạng thái khác, trả
+   * về có đổi hay không. User không tồn tại thì 404.
+   */
+  async setStatus(id: string, status: UserStatus, manager: EntityManager): Promise<boolean> {
+    const repository = manager.getRepository(User);
+    if (!(await repository.existsBy({ id }))) throw new AppException(ErrorCode.NOT_FOUND);
+    const result = await repository
+      .createQueryBuilder()
+      .update()
+      .set({ status })
+      .where('id = :id AND status <> :status', { id, status })
+      .execute();
+    return Boolean(result.affected);
   }
 
   /** Tạo ứng viên. */

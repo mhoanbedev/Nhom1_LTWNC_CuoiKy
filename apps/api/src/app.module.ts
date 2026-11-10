@@ -36,6 +36,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { MetaModule } from './modules/meta/meta.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { SeoModule } from './modules/seo/seo.module';
 
 @Module({
   imports: [
@@ -81,6 +83,8 @@ import { UsersModule } from './modules/users/users.module';
     ApplicationsModule,
     NotificationsModule,
     AdminModule,
+    StatsModule,
+    SeoModule,
   ],
   providers: [
     // Khai bằng APP_* thay vì app.useGlobal*() để chạy cả trong test e2e và dùng được DI.
