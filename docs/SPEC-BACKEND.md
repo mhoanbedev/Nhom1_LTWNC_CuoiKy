@@ -417,8 +417,8 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 
 | Method | Path | Ghi chú |
 | --- | --- | --- |
-| GET | /seo/sitemap | Tin và công ty công khai, slug theo từng ngôn ngữ, `updatedAt` |
-| GET | /seo/static-params | Tham số type (job hoặc company) và limit (mặc định 100), dùng cho generateStaticParams |
+| GET | /seo/sitemap | Công khai. Tin đang công khai và công ty đã duyệt, slug theo từng ngôn ngữ, `updatedAt` |
+| GET | /seo/static-params | Công khai. `type` (job hoặc company, bắt buộc), `limit` 1–1000 (mặc định 100): tin mới đăng nhất hoặc công ty mới duyệt nhất, trả `{ locale, slug }[]` (mỗi bản dịch một cặp), dùng cho generateStaticParams |
 | GET | /health | Kiểm tra kết nối DB |
 
 ## 8. Chuẩn kỹ thuật
@@ -710,7 +710,7 @@ Webhook gửi sau khi transaction đã commit, không chặn response, thử l�
 
 ### Sitemap, hreflang, canonical
 
-- `/seo/sitemap` trả mảng `{ type: 'job' | 'company', updatedAt, alternates: { locale, slug }[] }`. Chỉ gồm tin đang công khai, còn hạn, và công ty APPROVED.
+- `/seo/sitemap` trả mảng `{ type: 'job' | 'company', id, updatedAt, alternates: { locale, slug }[] }`. Chỉ gồm tin đang công khai (đủ 4 điều kiện `isJobPublic`) và công ty APPROVED. `id` khớp cache tag; `updatedAt` là mốc sửa mới nhất của bản ghi và các bản dịch (sửa riêng bản `en` cũng đổi `lastmod`); `alternates` chỉ gồm ngôn ngữ đã có, `vi` đứng đầu.
 - Frontend sinh mỗi URL cho từng locale có bản dịch, kèm `alternates.languages` và `x-default` trỏ về bản `vi`.
 - Canonical của mỗi trang trỏ về chính URL của nó theo ngôn ngữ. Không phát sinh URL `en` cho tin chưa có bản `en`, vì `alternates` chỉ liệt kê ngôn ngữ đã có.
 
@@ -907,10 +907,10 @@ Mỗi dòng là một commit theo Conventional Commits. Xong dòng nào thì `ma
 
 **Bước 6 – Admin, SEO** (`feat/api-admin-seo`)
 
-- [ ] `feat(api): duyệt công ty, ẩn tin, khóa user`
-- [ ] `feat(api): thống kê admin và nhà tuyển dụng`
-- [ ] `feat(shared): buildJobPostingJsonLd kèm test`
-- [ ] `feat(api): /seo/sitemap và /seo/static-params`
+- [x] `feat(api): duyệt công ty, ẩn tin, khóa user`
+- [x] `feat(api): thống kê admin và nhà tuyển dụng`
+- [x] `feat(shared): buildJobPostingJsonLd kèm test`
+- [x] `feat(api): /seo/sitemap và /seo/static-params`
 
 **Bước 7 – Nâng cao** (`feat/api-advanced`)
 
