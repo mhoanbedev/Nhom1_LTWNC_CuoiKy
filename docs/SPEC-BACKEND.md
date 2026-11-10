@@ -675,19 +675,23 @@ Backend phải cấp đủ dữ liệu và tín hiệu để frontend làm đư�
 
 ### Dữ liệu cho JSON-LD JobPosting
 
-`GET /jobs/:slug` trả đủ trường để dựng JobPosting qua Rich Results Test. Hàm dựng `buildJobPostingJsonLd(job, locale)` đặt trong `packages/shared`, có unit test, và frontend chỉ việc gọi.
+`GET /jobs/:slug` trả đủ trường để dựng JobPosting qua Rich Results Test. Hàm dựng `buildJobPostingJsonLd(job)` đặt trong `packages/shared`, có unit test, và frontend chỉ việc gọi; ngôn ngữ lấy từ `job.locale`.
+
+- Tin không được index (`seo.indexable: false`: đã đóng, hết hạn) thì hàm trả `null`, vì Google phạt trang có JobPosting đã hết hạn. Frontend chỉ nhúng khi có kết quả.
+- Nhúng bằng `serializeJsonLd(data)` (cũng trong `packages/shared`), không dùng `JSON.stringify` trực tiếp: hàm escape `<` để nội dung chứa `</script>` không phá thẻ script (XSS).
 
 | Thuộc tính JSON-LD | Lấy từ |
 | --- | --- |
-| title, description | Bản dịch theo locale; backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
+| title, description | Bản dịch theo locale; description ghép mô tả, yêu cầu, quyền lợi (có tiêu đề mục theo ngôn ngữ), trống hết thì dùng tiêu đề. Backend trả thêm `descriptionHtml` (cả `requirementsHtml`, `benefitsHtml`) render từ Markdown bằng markdown-it với HTML thô bị tắt, link `javascript:` bị chặn, không nhận ảnh |
 | datePosted, validThrough | `publishedAt`, `expiresAt` (ISO 8601) |
 | employmentType | Cố định `INTERN` |
-| identifier | `shortId` |
+| identifier | `PropertyValue` tên công ty + `shortId` |
 | hiringOrganization | Tên công ty, `website` làm sameAs, URL logo tuyệt đối |
-| jobLocation | Địa chỉ, tỉnh/thành, `addressCountry: VN`; bỏ qua nếu REMOTE |
+| jobLocation | Địa chỉ, tỉnh/thành, `addressCountry: VN`; bỏ qua nếu REMOTE (HYBRID vẫn có) |
 | jobLocationType, applicantLocationRequirements | Khi REMOTE: `TELECOMMUTE` và quốc gia Việt Nam |
-| baseSalary | Khi `isPaid`: VND, `minValue`, `maxValue`, đơn vị MONTH |
+| baseSalary | Khi `isPaid` và có ít nhất một mức: `currency` của tin, `minValue`, `maxValue` (mức nào có thì ghi), đơn vị MONTH |
 | directApply | `true` |
+| inLanguage, skills | `locale` của trang; tên các kỹ năng ngăn cách bằng dấu phẩy |
 
 Cùng response đó cũng đủ cho `opengraph-image.tsx`: tiêu đề, tên công ty, logo, địa điểm, hình thức làm việc, có lương hay không.
 

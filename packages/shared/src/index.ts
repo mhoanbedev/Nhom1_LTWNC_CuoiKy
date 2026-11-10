@@ -29,3 +29,4 @@ export * from './domain/job-lifecycle';
 export * from './domain/profile-completion';
 export * from './domain/cv-file';
 export * from './domain/application-status';
+export * from './domain/job-posting-jsonld';
