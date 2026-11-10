@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // Node16: chuẩn cho app CommonJS chạy trên Node (thay Node10 đã deprecated từ TS 6);
+    // Node20: chuẩn cho app CommonJS chạy trên Node 20+ (thay Node10 đã deprecated từ TS 6), cho phép
+    // require gói chỉ có ESM (vd @faker-js/faker) như Node 24 hỗ trợ;
     // package.json không có "type": "module" nên vẫn build ra CommonJS như cũ.
-    "module": "Node16",
+    "module": "Node20",
     "moduleResolution": "Node16",
     "outDir": "dist",
     "emitDecoratorMetadata": true,

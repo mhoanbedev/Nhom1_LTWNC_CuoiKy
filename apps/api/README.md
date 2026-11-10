@@ -20,7 +20,7 @@ Gõ `make` để xem đầy đủ.
 
 | Lệnh | Việc làm |
 | --- | --- |
-| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres, chạy migration, seed |
+| `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres và Mailpit, chạy migration, seed danh mục và dữ liệu demo |
 | `make env` | Tạo `.env` từ `.env.example` hoặc bổ sung biến còn thiếu |
 | `make up` / `make down` | Bật / tắt Postgres và Mailpit (giữ dữ liệu) |
 | `make logs` / `make ps` | Xem log / trạng thái container |
@@ -33,6 +33,7 @@ Gõ `make` để xem đầy đủ.
 | `make cloudinary-check` | Thử key Cloudinary: upload một ảnh và một PDF riêng tư vào folder `dev-check/`, in link |
 | `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit `http://localhost:8025`) |
 | `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
+| `make seed-demo` | Xóa rồi tạo lại dữ liệu demo (mọi tài khoản `@demo.vn` trừ admin); hỏi xác nhận trước khi xóa |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
 | `make lint` / `make format` / `make typecheck` | Kiểm tra và định dạng code |
@@ -49,11 +50,17 @@ Gõ `make` để xem đầy đủ.
 | PostgreSQL (Docker) | `localhost:5435` (5432–5434 đã có Postgres khác trên máy dùng) |
 | Mailpit (Docker): xem email đã gửi | `http://localhost:8025` (SMTP `localhost:1025`) |
 
-Tài khoản demo sau `make seed`:
+Tài khoản demo sau `make seed` và `make seed-demo` (mật khẩu chung `Demo@2026`):
 
-| Vai trò | Email | Mật khẩu |
+| Vai trò | Email | Dùng để |
 | --- | --- | --- |
-| Admin (duy nhất) | `admin@demo.vn` | `Demo@2026` |
+| Admin (duy nhất) | `admin@demo.vn` | Duyệt công ty, ẩn tin, khóa user, thống kê |
+| Nhà tuyển dụng | `recruiter@demo.vn` | Công ty đã duyệt, 60 tin; tin "Thực tập sinh Backend Node.js" có 255 đơn |
+| Nhà tuyển dụng | `recruiter.pending@demo.vn` | Công ty đang chờ duyệt (chưa đăng tin được) |
+| Ứng viên | `candidate@demo.vn` | Hồ sơ đủ, 2 CV, đơn ở nhiều trạng thái, có thông báo và tin đã lưu |
+| Ứng viên | `candidate.new@demo.vn` | Hồ sơ trống: nộp đơn ra lỗi `PROFILE_INCOMPLETE` |
+
+Ngoài ra có 10 nhà tuyển dụng `hr<n>@demo.vn` và 298 ứng viên `ungvien<nnn>@demo.vn`, cùng mật khẩu. Dữ liệu tạo bằng Faker với seed cố định nên lần nào chạy cũng giống nhau; tạo lại thì mọi tài khoản `@demo.vn` (trừ admin) bị xóa, dữ liệu bạn tự tạo bằng email khác được giữ. CV demo dùng chung 3 file PDF mẫu trên Cloudinary (folder `seed/`).
 
 Xem dữ liệu bằng pgAdmin cài trên máy: Register → Server, tab Connection điền theo `make db-info` (host `localhost`, cổng `5435`, user/mật khẩu/database `ltwnc`).
 
