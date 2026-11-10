@@ -268,7 +268,13 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 ### 5.8 Thông báo (nâng cao)
 
 - Notification được tạo trong cùng transaction với hành động sinh ra nó.
-- Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
+- Thời gian thực bằng SSE `GET /me/notifications/stream` (mọi vai trò đã đăng nhập):
+  - Sự kiện `unread-count` với `data: { count }`: gửi ngay khi kết nối và mỗi khi số chưa đọc đổi (thông báo mới, đọc một, đọc tất cả). Số luôn đọc lại từ DB; nhiều lần đổi dồn dập chỉ gửi số mới nhất. Sự kiện `ping` mỗi 25 giây để proxy không cắt kết nối.
+  - Thông báo tạo trong transaction chỉ được đẩy **sau khi commit** (TypeORM subscriber `afterTransactionCommit`); rollback (vd nộp trùng 409) thì không có sự kiện. Nơi tạo thông báo không phải tự gọi.
+  - Xác thực bằng header `Authorization` như mọi route. `EventSource` của trình duyệt không gửi được header, nên frontend dựng một Route Handler bên Next làm proxy: gọi backend kèm Bearer rồi stream lại cho trình duyệt. Không nhận token qua query string (lộ trong log).
+  - Stream tự đóng khi access token hết hạn và khi admin khóa tài khoản; proxy kết nối lại bằng token mới.
+  - Bộ phát sự kiện nằm trong bộ nhớ process, đủ cho 1 instance trên Render; chạy nhiều instance thì chuyển sang Redis pub/sub.
+- `GET /me/notifications/unread-count` giữ lại làm dự phòng (vd khi chưa dựng proxy SSE thì polling 30 giây).
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
 - Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do), admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
@@ -398,7 +404,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | GET | /me/notifications/unread-count | Dùng cho polling |
 | PATCH | /me/notifications/:id/read |  |
 | POST | /me/notifications/read-all |  |
-| GET | /me/notifications/stream | SSE, tùy chọn |
+| GET | /me/notifications/stream | SSE: sự kiện `unread-count` khi kết nối và khi số đổi, `ping` mỗi 25 giây; đóng khi token hết hạn hoặc bị khóa (mục 5.8) |
 
 ### Admin
 

@@ -7,4 +7,6 @@ export interface RequestUser {
   role: UserRole;
   companyId: string | null;
   preferredLocale: Locale;
+  /** Thời điểm access token hết hạn (ms); SSE đóng stream lúc này. */
+  tokenExpiresAt?: number;
 }

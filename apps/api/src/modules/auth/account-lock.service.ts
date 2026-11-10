@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { ErrorCode, UserStatus, type AdminUser } from '@ltwnc/shared';
 import { DataSource } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
+import { NotificationStreamService } from '../notifications/notification-stream.service';
 import { UsersService } from '../users/users.service';
 import { RefreshTokenService } from './refresh-token.service';
 
@@ -16,11 +17,13 @@ export class AccountLockService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly users: UsersService,
     private readonly refreshTokens: RefreshTokenService,
+    private readonly notificationStream: NotificationStreamService,
   ) {}
 
   /**
    * Khóa và thu hồi mọi refresh token trong cùng transaction: không refresh được nữa, còn access
-   * token đang còn hạn bị JwtStrategy chặn ngay (403 AUTH_ACCOUNT_LOCKED) vì nó đọc trạng thái từ DB.
+   * token đang còn hạn bị JwtStrategy chặn ngay (403 AUTH_ACCOUNT_LOCKED) vì nó đọc trạng thái từ DB;
+   * stream thông báo (SSE) đang mở bị đóng.
    * Không khóa được chính mình (hệ thống chỉ có 1 admin). Khóa lại tài khoản đã khóa thì giữ nguyên.
    */
   async lock(adminId: string, userId: string): Promise<AdminUser> {
@@ -29,6 +32,8 @@ export class AccountLockService {
       await this.users.setStatus(userId, UserStatus.LOCKED, manager);
       await this.refreshTokens.revokeAllForUser(userId, manager);
     });
+    // Stream SSE đang mở được xác thực lúc kết nối, nên phải đóng tay.
+    this.notificationStream.close(userId);
     return this.users.findForAdmin(userId);
   }
 
