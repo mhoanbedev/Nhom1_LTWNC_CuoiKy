@@ -8,7 +8,7 @@ import {
   type AdminCompany,
   type Paginated,
 } from '@ltwnc/shared';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { localizedText } from '../../common/utils/localized-text';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
@@ -52,25 +52,27 @@ export class CompaniesAdminService {
 
   /**
    * Duyệt: công ty đăng được tin, nhà tuyển dụng nhận COMPANY_APPROVED (cùng transaction).
-   * Gọi lại khi đã duyệt thì giữ nguyên, không báo lại (idempotent).
+   * Gọi lại khi đã duyệt thì giữ nguyên, không báo lại (idempotent). Điều kiện "chưa duyệt" nằm
+   * ngay trong UPDATE nên admin bấm duyệt nhiều lần cùng lúc cũng chỉ một lần gửi thông báo.
    */
   async approve(id: string): Promise<AdminCompany> {
     const company = await this.findById(id);
-    if (company.status !== CompanyStatus.APPROVED) {
-      await this.dataSource.transaction(async (manager) => {
-        await manager.getRepository(Company).update(id, {
-          status: CompanyStatus.APPROVED,
-          rejectReason: null,
-          approvedAt: new Date(),
-        });
-        await this.notifications.create(manager, company.ownerId, {
-          type: NotificationType.COMPANY_APPROVED,
-          data: { companyId: id, companyName: localizedText(company.translations, 'name') },
-        });
+    const changed = await this.dataSource.transaction(async (manager) => {
+      const result = await manager
+        .getRepository(Company)
+        .update(
+          { id, status: Not(CompanyStatus.APPROVED) },
+          { status: CompanyStatus.APPROVED, rejectReason: null, approvedAt: new Date() },
+        );
+      if (!result.affected) return false;
+      await this.notifications.create(manager, company.ownerId, {
+        type: NotificationType.COMPANY_APPROVED,
+        data: { companyId: id, companyName: localizedText(company.translations, 'name') },
       });
-      // Công ty và các tin đã đăng của công ty vừa trở thành công khai.
-      this.revalidate.notify(companyTags(id));
-    }
+      return true;
+    });
+    // Công ty và các tin đã đăng của công ty vừa trở thành công khai.
+    if (changed) this.revalidate.notify(companyTags(id));
     return toAdminCompany(await this.findById(id));
   }
 
