@@ -1,4 +1,4 @@
-# Hạ tầng dev: chỉ chạy PostgreSQL. API chạy trực tiếp trên máy bằng `make dev`.
+# Hạ tầng dev: PostgreSQL và Mailpit (hộp thư giả để xem email). API chạy trực tiếp trên máy bằng `make dev`.
 # Xem dữ liệu bằng pgAdmin (hoặc DBeaver...) cài trên máy; `make db-info` in thông số kết nối.
 name: ltwnc
 
@@ -20,6 +20,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  mailpit:
+    # Nhận mọi email qua SMTP và giữ lại, không gửi ra ngoài. Xem tại http://localhost:8025.
+    image: axllent/mailpit:v1.21.8
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025'
 
 volumes:
   pgdata:

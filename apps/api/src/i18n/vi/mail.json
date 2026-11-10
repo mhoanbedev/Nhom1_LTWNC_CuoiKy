@@ -1,0 +1,12 @@
+{
+  "APPLICATION_STATUS": {
+    "subject": "[{jobTitle}] Hồ sơ ứng tuyển: {status}",
+    "greeting": "Chào {name},",
+    "INTERVIEW": "{companyName} mời bạn phỏng vấn cho vị trí \"{jobTitle}\".",
+    "PASSED": "Chúc mừng! Bạn đã trúng tuyển vị trí \"{jobTitle}\" tại {companyName}.",
+    "FAILED": "Cảm ơn bạn đã ứng tuyển vị trí \"{jobTitle}\" tại {companyName}. Rất tiếc lần này hồ sơ của bạn chưa phù hợp.",
+    "note": "Lời nhắn từ nhà tuyển dụng: {note}",
+    "cta": "Xem chi tiết",
+    "footer": "Email gửi tự động từ Cổng tuyển dụng thực tập, vui lòng không trả lời."
+  }
+}

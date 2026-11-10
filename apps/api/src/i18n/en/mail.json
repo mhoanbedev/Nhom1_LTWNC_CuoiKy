@@ -1,0 +1,12 @@
+{
+  "APPLICATION_STATUS": {
+    "subject": "[{jobTitle}] Application update: {status}",
+    "greeting": "Hi {name},",
+    "INTERVIEW": "{companyName} has invited you to an interview for \"{jobTitle}\".",
+    "PASSED": "Congratulations! You have been accepted for \"{jobTitle}\" at {companyName}.",
+    "FAILED": "Thank you for applying to \"{jobTitle}\" at {companyName}. Unfortunately, your application was not successful this time.",
+    "note": "Message from the recruiter: {note}",
+    "cta": "View details",
+    "footer": "This email was sent automatically by the Internship Portal. Please do not reply."
+  }
+}

@@ -64,6 +64,10 @@ cloudinary-check: ## Thử key Cloudinary: upload ảnh và PDF riêng tư vào 
 	npm run build --prefix ../.. -w @ltwnc/shared
 	npm run cloudinary:check
 
+mail-check: ## Gửi một email thử qua SMTP trong .env (dev: xem ở Mailpit http://localhost:8025)
+	npm run build --prefix ../.. -w @ltwnc/shared
+	npm run mail:check
+
 ##@ Phát triển
 dev: ## Chạy API ở chế độ watch (build packages/shared trước)
 	npm run build --prefix ../.. -w @ltwnc/shared

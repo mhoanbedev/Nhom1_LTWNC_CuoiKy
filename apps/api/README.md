@@ -22,7 +22,7 @@ Gõ `make` để xem đầy đủ.
 | --- | --- |
 | `make setup` | Lần đầu: cài dependency, tạo `.env`, bật Postgres, chạy migration, seed |
 | `make env` | Tạo `.env` từ `.env.example` hoặc bổ sung biến còn thiếu |
-| `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
+| `make up` / `make down` | Bật / tắt Postgres và Mailpit (giữ dữ liệu) |
 | `make logs` / `make ps` | Xem log / trạng thái container |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
@@ -31,6 +31,7 @@ Gõ `make` để xem đầy đủ.
 | `make migration-generate name=AddJobIndex` | Sinh migration từ thay đổi entity |
 | `make migration-create name=TenMoTa` | Tạo migration rỗng để viết SQL tay |
 | `make cloudinary-check` | Thử key Cloudinary: upload một ảnh và một PDF riêng tư vào folder `dev-check/`, in link |
+| `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit `http://localhost:8025`) |
 | `make seed` | Seed danh mục (kỹ năng, ngành, tỉnh/thành) và tài khoản admin; chạy lại được nhiều lần |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -46,6 +47,7 @@ Gõ `make` để xem đầy đủ.
 | Swagger UI | `http://localhost:4000/api/docs` (file: `/api/docs/openapi.json`) |
 | Health check | `http://localhost:4000/api/v1/health` |
 | PostgreSQL (Docker) | `localhost:5435` (5432–5434 đã có Postgres khác trên máy dùng) |
+| Mailpit (Docker): xem email đã gửi | `http://localhost:8025` (SMTP `localhost:1025`) |
 
 Tài khoản demo sau `make seed`:
 
@@ -80,4 +82,6 @@ Khai trong [.env.example](.env.example). `make env` tạo `.env` và tự bổ s
 | `GOOGLE_CLIENT_ID` | Client ID của OAuth client Google, dùng làm audience khi verify `id_token`; không phải bí mật |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh (công khai) và CV (riêng tư). Kiểm key bằng `make cloudinary-check` |
 | `REVALIDATE_URL`, `REVALIDATE_SECRET` | Webhook báo Next làm mới trang khi dữ liệu công khai đổi. URL để trống thì chỉ ghi log. Secret `make env` tự sinh; frontend dùng cùng giá trị để kiểm header `x-revalidate-secret` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | Gửi email cho ứng viên khi đơn sang INTERVIEW, PASSED, FAILED. Dev dùng Mailpit (`localhost:1025`, không cần user/mật khẩu), xem tại `http://localhost:8025`. Gửi thật thì chỉ đổi các biến này (vd Gmail: `smtp.gmail.com`, `465`, `SMTP_SECURE=true`, App Password). `SMTP_HOST` trống thì tắt email, chỉ ghi log. `SMTP_PASS` là bí mật |
+| `MAILPIT_UI_PORT` | Cổng giao diện Mailpit trong docker-compose (mặc định 8025) |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Chỉ `make seed` dùng: tài khoản admin duy nhất. Chạy seed lại với giá trị khác thì cập nhật chính admin đó |

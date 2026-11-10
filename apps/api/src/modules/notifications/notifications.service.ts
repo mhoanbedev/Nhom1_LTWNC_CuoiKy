@@ -15,6 +15,7 @@ import { EntityManager, IsNull, Repository } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
 import { paginate, toSkipTake } from '../../common/utils/paginate';
 import { Notification } from './entities/notification.entity';
+import { NotificationStreamService } from './notification-stream.service';
 import { renderNotification } from './notification-renderer';
 
 @Injectable()
@@ -22,11 +23,12 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification) private readonly notifications: Repository<Notification>,
     private readonly i18n: I18nService,
+    private readonly stream: NotificationStreamService,
   ) {}
 
   /**
    * Tạo thông báo bằng `manager` của transaction đang chạy: hành động lỗi (rollback) thì không để
-   * lại thông báo "ma" (mục 5.8 của đặc tả).
+   * lại thông báo "ma" (mục 5.8 của đặc tả). Số chưa đọc được đẩy qua SSE sau khi transaction commit.
    */
   async create(
     manager: EntityManager,
@@ -34,6 +36,7 @@ export class NotificationsService {
     payload: NotificationPayload,
   ): Promise<void> {
     await manager.getRepository(Notification).insert({ userId, ...payload, readAt: null });
+    this.stream.publishAfterCommit(manager.queryRunner, userId);
   }
 
   /** Mới nhất lên trước; `?unread=true` chỉ lấy chưa đọc. */
@@ -67,6 +70,7 @@ export class NotificationsService {
     if (!row.readAt) {
       row.readAt = new Date();
       await this.notifications.update(row.id, { readAt: row.readAt });
+      this.stream.publish(userId);
     }
     return this.toItem(row, locale);
   }
@@ -76,7 +80,9 @@ export class NotificationsService {
       { userId, readAt: IsNull() },
       { readAt: new Date() },
     );
-    return { updated: result.affected ?? 0 };
+    const updated = result.affected ?? 0;
+    if (updated > 0) this.stream.publish(userId);
+    return { updated };
   }
 
   private toItem(row: Notification, locale: Locale): NotificationItem {

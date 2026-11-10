@@ -3,13 +3,15 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  type MessageEvent,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Sse,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   isLocale,
   LOCALES,
@@ -32,7 +34,9 @@ import {
   ReadAllResultDto,
   UnreadCountDto,
 } from './dto/notification.dto';
+import { NotificationStreamService } from './notification-stream.service';
 import { NotificationsService } from './notifications.service';
+import type { Observable } from 'rxjs';
 
 /**
  * Câu chữ thông báo theo ngôn ngữ ưa thích của người nhận (`preferredLocale`); request có `?lang=`
@@ -54,7 +58,10 @@ const LANG_QUERY = {
 @ApiBearerAuth()
 @Controller('me/notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly streamService: NotificationStreamService,
+  ) {}
 
   @Get()
   @ApiQuery(LANG_QUERY)
@@ -73,8 +80,20 @@ export class NotificationsController {
     return this.notificationsService.list(user.id, query, localeOf(user, lang));
   }
 
+  @Sse('stream')
+  @ApiProduces('text/event-stream')
+  @ApiOperation({
+    summary: 'Số thông báo chưa đọc theo thời gian thực (SSE)',
+    description:
+      'Sự kiện `unread-count` (`{ count }`) gửi ngay khi kết nối và mỗi khi số đổi (thông báo mới sau khi commit, đọc một, đọc tất cả); `ping` mỗi 25 giây. Stream đóng khi access token hết hạn hoặc tài khoản bị khóa, frontend kết nối lại bằng token mới. Xác thực bằng header Authorization: trình duyệt đi qua Route Handler của Next làm proxy (EventSource không gửi được header). Swagger UI không hiển thị được stream; thử bằng curl -N.',
+  })
+  @ApiErrorResponses(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
+  stream(@CurrentUser() user: RequestUser): Observable<MessageEvent> {
+    return this.streamService.stream(user.id, user.tokenExpiresAt);
+  }
+
   @Get('unread-count')
-  @ApiOperation({ summary: 'Số thông báo chưa đọc (frontend hỏi mỗi 30 giây)' })
+  @ApiOperation({ summary: 'Số thông báo chưa đọc (dự phòng khi không dùng stream)' })
   @ApiDataResponse(UnreadCountDto)
   @ApiErrorResponses(HttpStatus.UNAUTHORIZED)
   unreadCount(@CurrentUser() user: RequestUser): Promise<UnreadCount> {

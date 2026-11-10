@@ -18,6 +18,7 @@ import { appConfig } from './config/app.config';
 import { cloudinaryConfig } from './config/cloudinary.config';
 import { googleConfig } from './config/google.config';
 import { revalidateConfig } from './config/revalidate.config';
+import { mailConfig } from './config/mail.config';
 import { rateLimitConfig } from './config/rate-limit.config';
 import { buildThrottlerOptions } from './common/rate-limit/rate-limit';
 import { databaseConfig } from './config/database.config';
@@ -26,6 +27,7 @@ import { validateEnv } from './config/env.schema';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RevalidateModule } from './infrastructure/revalidate/revalidate.module';
+import { MailModule } from './infrastructure/mail/mail.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { JobsModule } from './modules/jobs/jobs.module';
@@ -55,6 +57,7 @@ import { SeoModule } from './modules/seo/seo.module';
         rateLimitConfig,
         cloudinaryConfig,
         revalidateConfig,
+        mailConfig,
       ],
     }),
     I18nModule.forRoot({
@@ -72,6 +75,7 @@ import { SeoModule } from './modules/seo/seo.module';
     }),
     DatabaseModule,
     RevalidateModule,
+    MailModule,
     HealthModule,
     UsersModule,
     AuthModule,

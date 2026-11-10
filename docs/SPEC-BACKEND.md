@@ -35,7 +35,7 @@ Backend là một API NestJS độc lập (kiến trúc C), lo toàn bộ dữ l
 - File: Multer (memoryStorage, không ghi đĩa) + **Cloudinary**. Ảnh (logo, avatar) để công khai; CV để chế độ `authenticated` và chỉ tải được qua signed URL ngắn hạn (mục 5.5).
 - `@nestjs/swagger`, `@nestjs/schedule` (cron đóng tin hết hạn), `@nestjs/event-emitter` (việc chạy sau commit: revalidate, email), `@nestjs/throttler`, `helmet`.
 - Jest + supertest.
-- **Dev:** Docker Compose chỉ chạy PostgreSQL; xem dữ liệu bằng pgAdmin cài trên máy (`make db-info` in thông số kết nối); mọi lệnh gọi qua **Makefile** (mục 10).
+- **Dev:** Docker Compose chạy PostgreSQL và Mailpit (hộp thư giả để xem email); xem dữ liệu bằng pgAdmin cài trên máy (`make db-info` in thông số kết nối); mọi lệnh gọi qua **Makefile** (mục 10).
 - **Deploy:** backend lên **Render** bằng Dockerfile, database production trên Neon; frontend lên Vercel.
 
 ### Repo và phân công
@@ -261,18 +261,26 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 
 ### 5.7 Gợi ý việc theo kỹ năng (nâng cao)
 
-- Hàm thuần `matchScore(candidateSkillIds, jobSkills)`: kỹ năng bắt buộc có trọng số 2, kỹ năng ưu tiên trọng số 1. Điểm bằng tổng trọng số khớp chia tổng trọng số của tin, quy ra thang 0–100.
-- `GET /me/recommended-jobs` lấy các tin công khai có ít nhất 1 kỹ năng trùng và bỏ tin đã nộp, sắp xếp theo điểm giảm dần, trả top 20 kèm `matchScore` và `matchedSkills`.
-- Chi tiết tin cũng trả `matchScore` khi người xem là candidate.
+- Hàm thuần `matchScore(candidateSkillIds, jobSkills)` trong `packages/shared`: kỹ năng bắt buộc có trọng số 2, kỹ năng ưu tiên trọng số 1. Điểm bằng tổng trọng số khớp chia tổng trọng số của tin, quy ra thang 0–100 và làm tròn; trả `{ score, matchedSkillIds }`. Mức thành thạo của ứng viên không tính; tin không có kỹ năng thì 0.
+- `GET /me/recommended-jobs` lấy các tin công khai có ít nhất 1 kỹ năng trùng và bỏ tin đã nộp (kể cả đơn đã rút), sắp xếp theo điểm giảm dần (bằng điểm thì tin mới đăng trước), trả top 20 kèm `matchScore` và `matchedSkills` (tên theo `?lang`). Hồ sơ chưa có kỹ năng thì trả mảng rỗng. SQL tính cùng công thức để sắp xếp; điểm trả ra tính lại bằng hàm thuần.
+- Chi tiết tin cũng trả `matchScore` và `matchedSkillIds` khi người xem là candidate.
 
 ### 5.8 Thông báo (nâng cao)
 
 - Notification được tạo trong cùng transaction với hành động sinh ra nó.
-- Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
+- Thời gian thực bằng SSE `GET /me/notifications/stream` (mọi vai trò đã đăng nhập):
+  - Sự kiện `unread-count` với `data: { count }`: gửi ngay khi kết nối và mỗi khi số chưa đọc đổi (thông báo mới, đọc một, đọc tất cả). Số luôn đọc lại từ DB; nhiều lần đổi dồn dập chỉ gửi số mới nhất. Sự kiện `ping` mỗi 25 giây để proxy không cắt kết nối.
+  - Thông báo tạo trong transaction chỉ được đẩy **sau khi commit** (TypeORM subscriber `afterTransactionCommit`); rollback (vd nộp trùng 409) thì không có sự kiện. Nơi tạo thông báo không phải tự gọi.
+  - Xác thực bằng header `Authorization` như mọi route. `EventSource` của trình duyệt không gửi được header, nên frontend dựng một Route Handler bên Next làm proxy: gọi backend kèm Bearer rồi stream lại cho trình duyệt. Không nhận token qua query string (lộ trong log).
+  - Stream tự đóng khi access token hết hạn và khi admin khóa tài khoản; proxy kết nối lại bằng token mới.
+  - Bộ phát sự kiện nằm trong bộ nhớ process, đủ cho 1 instance trên Render; chạy nhiều instance thì chuyển sang Redis pub/sub.
+- `GET /me/notifications/unread-count` giữ lại làm dự phòng (vd khi chưa dựng proxy SSE thì polling 30 giây).
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
 - Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do), admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
-- Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
+- Email (tùy chọn): gửi khi nhà tuyển dụng chuyển đơn sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale` của ứng viên (câu chữ trong `src/i18n/<lang>/mail.json`). Gửi sau khi đổi trạng thái đã commit (409 hay chuyển sai thì không gửi), chạy nền, không chặn request; lỗi SMTP chỉ ghi log.
+  - Gửi qua SMTP bằng `nodemailer`, lớp tích hợp duy nhất là `infrastructure/mail` (`MailService`). Dev dùng Mailpit trong docker-compose (SMTP `localhost:1025`, xem thư tại `http://localhost:8025`); gửi thật thì chỉ đổi biến `SMTP_*`, `MAIL_FROM`. `SMTP_HOST` để trống thì tắt email. `make mail-check` gửi một email thử.
+  - Nội dung: lời chào, câu theo trạng thái (kèm tên tin, tên công ty theo ngôn ngữ), lời nhắn của nhà tuyển dụng nếu có, nút "Xem chi tiết". Bản HTML escape mọi giá trị người dùng nhập. Link tạm trỏ về `FRONTEND_URL/{locale}` cho tới khi frontend chốt route trang đơn của ứng viên.
 
 ### 5.9 Thống kê
 
@@ -352,8 +360,8 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | Method | Path | Quyền | Ghi chú |
 | --- | --- | --- | --- |
 | GET | /jobs | Guest | Lọc theo `q`, `skills` (`?skills=a&skills=b`, `?skills=a,b` hoặc `?skills[]=a`; khớp khi tin có ít nhất một kỹ năng), `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` (mặc định khi có `q`, theo `similarity` của pg_trgm) |
-| GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `isSaved`, `hasApplied` |
-| GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp |
+| GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `matchedSkillIds`, `isSaved`, `hasApplied` |
+| GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp, bỏ tin đã nộp; mỗi tin kèm `matchScore`, `matchedSkills` |
 | GET | /companies | Guest |  |
 | GET | /companies/:slug | Guest | Chỉ công ty APPROVED |
 | GET | /companies/:slug/jobs | Guest |  |
@@ -398,7 +406,7 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | GET | /me/notifications/unread-count | Dùng cho polling |
 | PATCH | /me/notifications/:id/read |  |
 | POST | /me/notifications/read-all |  |
-| GET | /me/notifications/stream | SSE, tùy chọn |
+| GET | /me/notifications/stream | SSE: sự kiện `unread-count` khi kết nối và khi số đổi, `ping` mỗi 25 giây; đóng khi token hết hạn hoặc bị khóa (mục 5.8) |
 
 ### Admin
 
@@ -474,7 +482,7 @@ apps/api/
     ├── infrastructure/       tích hợp bên ngoài, mỗi thứ một module
     │   ├── cloudinary/       upload, xóa, sinh signed URL
     │   ├── revalidate/       gọi webhook revalidate của Next
-    │   └── mail/             tùy chọn
+    │   └── mail/             gửi email qua SMTP (dev: Mailpit)
     ├── i18n/                 vi/*.json, en/*.json
     └── modules/
         ├── auth/   users/   companies/   jobs/   profiles/   cvs/
@@ -760,7 +768,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | Lệnh | Việc làm |
 | --- | --- |
 | `make setup` | Lần đầu: cài dependency, tạo `.env` từ `.env.example` nếu chưa có, bật Docker, chạy migration, seed |
-| `make up` / `make down` | Bật / tắt Postgres (giữ dữ liệu) |
+| `make up` / `make down` | Bật / tắt Postgres và Mailpit (giữ dữ liệu) |
 | `make logs` | Xem log container |
 | `make dev` | Chạy API ở chế độ watch |
 | `make build` / `make start` | Build và chạy bản production trên máy |
@@ -774,6 +782,7 @@ Gõ `make` không tham số sẽ in danh sách lệnh. Makefile chỉ là lối 
 | `make db-reset` | Xóa volume, bật lại DB, migrate, seed |
 | `make db-shell` | Mở `psql` trong container |
 | `make db-info` | In thông số kết nối Postgres cho pgAdmin trên máy |
+| `make mail-check` | Gửi một email thử qua SMTP trong `.env` (dev: xem ở Mailpit) |
 | `make docker-build` | Build image production giống Render để thử trước khi deploy |
 
 ### Triển khai backend lên Render

@@ -45,6 +45,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new AppException(ErrorCode.AUTH_TOKEN_INVALID);
     }
 
-    return toRequestUser(user);
+    const requestUser = toRequestUser(user);
+    if (payload.exp !== undefined) requestUser.tokenExpiresAt = payload.exp * 1000;
+    return requestUser;
   }
 }

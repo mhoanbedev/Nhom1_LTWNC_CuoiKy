@@ -38,6 +38,20 @@ export const envSchema = z
     /** Route Handler revalidate bên Next. Để trống: không gọi webhook, chỉ ghi log (dev). */
     REVALIDATE_URL: emptyAsUndefined(z.url().optional()),
     REVALIDATE_SECRET: emptyAsUndefined(z.string().min(16, 'tối thiểu 16 ký tự').optional()),
+    /** SMTP gửi email (dev: Mailpit). Để trống SMTP_HOST: tắt email, chỉ ghi log. */
+    SMTP_HOST: emptyAsUndefined(z.string().optional()),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+    SMTP_SECURE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    SMTP_USER: emptyAsUndefined(z.string().optional()),
+    SMTP_PASS: emptyAsUndefined(z.string().optional()),
+    MAIL_FROM: z.string().min(3).default('Cổng thực tập <no-reply@ltwnc.local>'),
+  })
+  .refine((env) => !env.SMTP_USER === !env.SMTP_PASS, {
+    path: ['SMTP_PASS'],
+    message: 'SMTP_USER và SMTP_PASS phải cùng có hoặc cùng để trống',
   })
   .refine((env) => !env.REVALIDATE_URL || env.REVALIDATE_SECRET, {
     path: ['REVALIDATE_SECRET'],
