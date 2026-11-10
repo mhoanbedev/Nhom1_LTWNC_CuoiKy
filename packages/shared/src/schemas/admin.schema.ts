@@ -45,3 +45,9 @@ export const adminUsersQuerySchema = paginationQuerySchema.extend({
   q: searchQuerySchema,
 });
 export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>;
+
+/** `GET /admin/stats?days=30`: khoảng ngày của biểu đồ đơn theo ngày và top công ty. */
+export const adminStatsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+export type AdminStatsQuery = z.infer<typeof adminStatsQuerySchema>;

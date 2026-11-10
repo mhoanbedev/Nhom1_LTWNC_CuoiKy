@@ -271,13 +271,16 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 - Frontend polling `GET /me/notifications/unread-count` mỗi 30 giây. Muốn điểm cao hơn thì thêm SSE `GET /me/notifications/stream`.
 - `data` chỉ chứa tham số (id đơn, id tin, tên tin `{ vi, en }`, tên ứng viên, trạng thái cũ/mới, ghi chú, lý do), không lưu câu chữ và không lưu đường dẫn: frontend tự dựng link từ `type` và các id. Kiểu `NotificationPayload` trong `packages/shared`.
 - `title`, `body` dịch theo `preferredLocale` của người nhận; request có `?lang=` thì ưu tiên `?lang`. Câu chữ ở `src/i18n/<lang>/notifications.json`.
-- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do). admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
+- Gửi khi: nộp đơn (`NEW_APPLICATION` cho chủ tin), mọi lần nhà tuyển dụng đổi trạng thái (`APPLICATION_STATUS_CHANGED` cho ứng viên, kèm ghi chú), ứng viên rút đơn (`APPLICATION_STATUS_CHANGED` cho nhà tuyển dụng), admin duyệt (`COMPANY_APPROVED`, duyệt lại không báo), admin từ chối hay thu hồi duyệt (`COMPANY_REJECTED` kèm lý do), admin ẩn tin (`JOB_HIDDEN` kèm lý do cho chủ tin, ẩn lại tin đang ẩn không báo lại).
 - Email (tùy chọn): gửi khi đơn chuyển sang INTERVIEW, PASSED hoặc FAILED, dùng template theo `preferredLocale`. Chạy nền, không chặn request.
 
 ### 5.9 Thống kê
 
 - **Admin:** số tin theo trạng thái, số đơn theo trạng thái, số đơn theo ngày trong 30 ngày gần nhất, top 5 công ty nhận nhiều đơn nhất, số công ty đang chờ duyệt.
 - **Recruiter:** với mỗi tin của công ty mình, số đơn theo từng trạng thái.
+- Module `stats` chỉ đọc (join, `GROUP BY`), không ghi bảng nào. Mọi trạng thái luôn có mặt trong response, bằng 0 nếu không có.
+- `GET /admin/stats?days=30` (`days` 1–365): số tin, số đơn theo trạng thái tính trên toàn bộ dữ liệu (tin bị ẩn đếm riêng ở `hidden`); số đơn theo ngày và top 5 công ty tính trong `days` ngày. Ngày chia theo giờ Việt Nam, đủ `days` ngày tới hôm nay, ngày không có đơn là 0. Tên công ty theo `?lang`, thiếu bản dịch thì dùng `vi`.
+- `GET /recruiter/stats`: mọi tin của công ty (kể cả nháp, bị ẩn), mới tạo trước, mỗi tin có `total` và `byStatus`; kèm `totals` cộng dồn.
 
 ## 6. Xác thực
 
@@ -475,7 +478,7 @@ apps/api/
     ├── i18n/                 vi/*.json, en/*.json
     └── modules/
         ├── auth/   users/   companies/   jobs/   profiles/   cvs/
-        └── applications/   notifications/   admin/   meta/   seo/   health/
+        └── applications/   notifications/   admin/   stats/   meta/   seo/   health/
 ```
 
 Mọi module trong `modules/` có cùng bố cục: file để phẳng ở gốc thư mục module, chỉ tách `entities/` và `dto/`. Ví dụ module `applications`:

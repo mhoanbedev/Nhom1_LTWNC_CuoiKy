@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { JobsModule } from '../jobs/jobs.module';
+import { StatsModule } from '../stats/stats.module';
 import { UsersModule } from '../users/users.module';
 import { AdminCompaniesController } from './admin-companies.controller';
 import { AdminJobsController } from './admin-jobs.controller';
+import { AdminStatsController } from './admin-stats.controller';
 import { AdminUsersController } from './admin-users.controller';
 
 /**
@@ -12,7 +14,12 @@ import { AdminUsersController } from './admin-users.controller';
  * của module sở hữu dữ liệu (vd CompaniesAdminService thuộc module companies).
  */
 @Module({
-  imports: [CompaniesModule, JobsModule, UsersModule, AuthModule],
-  controllers: [AdminCompaniesController, AdminJobsController, AdminUsersController],
+  imports: [CompaniesModule, JobsModule, UsersModule, AuthModule, StatsModule],
+  controllers: [
+    AdminCompaniesController,
+    AdminJobsController,
+    AdminUsersController,
+    AdminStatsController,
+  ],
 })
 export class AdminModule {}

@@ -1,4 +1,9 @@
-import { adminJobsQuerySchema, adminUsersQuerySchema, hideJobSchema } from './admin.schema';
+import {
+  adminJobsQuerySchema,
+  adminStatsQuerySchema,
+  adminUsersQuerySchema,
+  hideJobSchema,
+} from './admin.schema';
 
 describe('adminJobsQuerySchema', () => {
   it('điền phân trang mặc định, không lọc gì', () => {
@@ -38,5 +43,18 @@ describe('adminUsersQuerySchema', () => {
 
   it('GUEST không phải vai trò lưu DB nên bị từ chối', () => {
     expect(adminUsersQuerySchema.safeParse({ role: 'GUEST' }).success).toBe(false);
+  });
+});
+
+describe('adminStatsQuerySchema', () => {
+  it('mặc định 30 ngày, ép kiểu từ query string', () => {
+    expect(adminStatsQuerySchema.parse({})).toEqual({ days: 30 });
+    expect(adminStatsQuerySchema.parse({ days: '7' })).toEqual({ days: 7 });
+  });
+
+  it('ngoài khoảng 1–365 hoặc không nguyên bị từ chối', () => {
+    for (const days of ['0', '366', '1.5', 'abc']) {
+      expect(adminStatsQuerySchema.safeParse({ days }).success).toBe(false);
+    }
   });
 });

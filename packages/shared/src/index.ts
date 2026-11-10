@@ -13,6 +13,7 @@ export * from './api/cv';
 export * from './api/application';
 export * from './api/notification';
 export * from './api/admin';
+export * from './api/stats';
 export * from './schemas/auth.schema';
 export * from './schemas/company.schema';
 export * from './schemas/pagination.schema';
