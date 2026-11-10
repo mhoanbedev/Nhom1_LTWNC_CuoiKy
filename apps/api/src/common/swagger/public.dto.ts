@@ -74,6 +74,22 @@ export class PublicJobDetailDto extends createZodDto(
       .boolean()
       .optional()
       .meta({ description: 'Đã nộp đơn (kể cả đã rút); chỉ có khi ứng viên gửi kèm token' }),
+    matchScore: z
+      .number()
+      .int()
+      .optional()
+      .meta({ description: 'Độ khớp kỹ năng 0–100; chỉ có khi ứng viên gửi kèm token' }),
+    matchedSkillIds: z
+      .array(z.uuid())
+      .optional()
+      .meta({ description: 'Kỹ năng của tin mà ứng viên có; chỉ có khi ứng viên gửi kèm token' }),
+  }),
+) {}
+
+export class RecommendedJobDto extends createZodDto(
+  jobListItem.extend({
+    matchScore: z.number().int().meta({ description: '0–100, kỹ năng bắt buộc trọng số 2' }),
+    matchedSkills: jobListItem.shape.skills,
   }),
 ) {}
 

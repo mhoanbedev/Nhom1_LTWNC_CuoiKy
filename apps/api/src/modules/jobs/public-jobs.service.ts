@@ -5,6 +5,8 @@ import {
   ErrorCode,
   isJobPublic,
   JobStatus,
+  MATCH_WEIGHT,
+  matchScore,
   normalizeSearchText,
   Role,
   type CompanyJobsQuery,
@@ -13,6 +15,7 @@ import {
   type PublicJobDetail,
   type PublicJobListItem,
   type PublicJobsQuery,
+  type RecommendedJob,
 } from '@ltwnc/shared';
 import { In, Repository, type SelectQueryBuilder } from 'typeorm';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -22,11 +25,18 @@ import type { RequestUser } from '../../common/types/request-user';
 import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { Application } from '../applications/entities/application.entity';
+import { CandidateSkill } from '../profiles/entities/candidate-skill.entity';
+import { JobSkill } from './entities/job-skill.entity';
 import { toPublicJobDetail, toPublicJobListItem } from './public-job.mapper';
 
 const SHORT_ID_PATTERN = /^[a-z0-9]{6}$/;
 /** search_text của bản theo `lang`, tin chưa có bản đó thì dùng bản `vi`. */
 const SEARCH_TEXT = 'COALESCE(tl.search_text, tv.search_text)';
+/** Số tin gợi ý tối đa (mục 5.7 của đặc tả). */
+const RECOMMENDED_LIMIT = 20;
+/** Trọng số của một kỹ năng tin trong SQL, khớp MATCH_WEIGHT của hàm matchScore. */
+const SKILL_WEIGHT = `(CASE WHEN js.isRequired THEN ${MATCH_WEIGHT.REQUIRED} ELSE ${MATCH_WEIGHT.PREFERRED} END)`;
+const SKILL_OWNED = 'js.skillId IN (:...skillIds)';
 
 /** shortId là đoạn cuối của slug (`thuc-tap-backend-a1b2c3` → `a1b2c3`). */
 export function shortIdFromSlug(slug: string): string | null {
@@ -146,10 +156,86 @@ export class PublicJobsService {
     // Thông tin riêng của người xem chỉ thêm cho ứng viên đã đăng nhập.
     if (viewer?.role === Role.CANDIDATE) {
       const where = { candidateId: viewer.id, jobId: job.id };
-      detail.isSaved = await this.savedJobs.existsBy(where);
-      detail.hasApplied = await this.jobs.manager.existsBy(Application, where);
+      const [isSaved, hasApplied, skillIds] = await Promise.all([
+        this.savedJobs.existsBy(where),
+        this.jobs.manager.existsBy(Application, where),
+        this.candidateSkillIds(viewer.id),
+      ]);
+      const match = matchScore(skillIds, job.skills ?? []);
+      Object.assign(detail, {
+        isSaved,
+        hasApplied,
+        matchScore: match.score,
+        matchedSkillIds: match.matchedSkillIds,
+      });
     }
     return detail;
+  }
+
+  /**
+   * Gợi ý việc (mục 5.7): tin công khai có ít nhất 1 kỹ năng trùng với hồ sơ, bỏ tin đã nộp (kể cả
+   * đã rút), điểm cao trước, bằng điểm thì tin mới đăng trước; tối đa 20 tin. SQL tính điểm (chưa
+   * làm tròn) chỉ để sắp xếp; điểm trả ra tính lại bằng hàm matchScore dùng chung với frontend.
+   */
+  async recommended(candidateId: string, lang: Locale): Promise<RecommendedJob[]> {
+    const skillIds = await this.candidateSkillIds(candidateId);
+    if (skillIds.length === 0) return [];
+    const rows = await this.jobs
+      .createQueryBuilder('job')
+      .innerJoin('job.company', 'company')
+      .innerJoin(JobSkill, 'js', 'js.jobId = job.id')
+      .select('job.id', 'id')
+      .addSelect(
+        `SUM(CASE WHEN ${SKILL_OWNED} THEN ${SKILL_WEIGHT} ELSE 0 END)::numeric / SUM(${SKILL_WEIGHT})`,
+        'ratio',
+      )
+      .where(PUBLIC_JOB_CONDITION, publicJobParams())
+      .andWhere(
+        'NOT EXISTS (SELECT 1 FROM applications a WHERE a.job_id = job.id AND a.candidate_id = :candidateId)',
+        { candidateId },
+      )
+      .setParameter('skillIds', skillIds)
+      .groupBy('job.id')
+      .having(`COUNT(*) FILTER (WHERE ${SKILL_OWNED}) > 0`)
+      .orderBy('ratio', 'DESC')
+      .addOrderBy('job.publishedAt', 'DESC')
+      .addOrderBy('job.id', 'ASC')
+      .limit(RECOMMENDED_LIMIT)
+      .getRawMany<{ id: string }>();
+    const jobs = await this.loadPublicJobs(rows.map((row) => row.id));
+    return jobs.map((job) => {
+      const item = toPublicJobListItem(job, lang);
+      const match = matchScore(skillIds, job.skills ?? []);
+      const matched = new Set(match.matchedSkillIds);
+      return {
+        ...item,
+        matchScore: match.score,
+        matchedSkills: item.skills.filter((skill) => matched.has(skill.id)),
+      };
+    });
+  }
+
+  /** Kỹ năng trong hồ sơ ứng viên (đọc bảng của module profiles). */
+  private async candidateSkillIds(candidateId: string): Promise<string[]> {
+    const rows = await this.jobs.manager
+      .getRepository(CandidateSkill)
+      .createQueryBuilder('cs')
+      .innerJoin('cs.profile', 'profile')
+      .select('cs.skillId', 'skillId')
+      .where('profile.userId = :candidateId', { candidateId })
+      .getRawMany<{ skillId: string }>();
+    return rows.map((row) => row.skillId);
+  }
+
+  /** Nạp đủ quan hệ cho các tin theo đúng thứ tự `ids` (bước 2 của danh sách hai bước). */
+  private async loadPublicJobs(ids: string[]): Promise<Job[]> {
+    if (ids.length === 0) return [];
+    const jobs = await this.jobs.find({ where: { id: In(ids) }, relations: DETAIL_RELATIONS });
+    const byId = new Map(jobs.map((job) => [job.id, job]));
+    return ids.flatMap((id) => {
+      const job = byId.get(id);
+      return job ? [job] : [];
+    });
   }
 
   /** Khung truy vấn tin công khai, kèm bản dịch theo `lang` (tl) và bản `vi` (tv) để tìm kiếm. */
@@ -171,15 +257,11 @@ export class PublicJobsService {
     const total = await builder.clone().orderBy().getCount();
     const { skip, take } = toSkipTake(query);
     const rows = await builder.offset(skip).limit(take).getRawMany<{ id: string }>();
-    const ids = rows.map((row) => row.id);
-    const jobs = ids.length
-      ? await this.jobs.find({ where: { id: In(ids) }, relations: DETAIL_RELATIONS })
-      : [];
-    const byId = new Map(jobs.map((job) => [job.id, job]));
-    const ordered = ids.flatMap((id) => {
-      const job = byId.get(id);
-      return job ? [toPublicJobListItem(job, lang)] : [];
-    });
-    return paginate(ordered, total, query);
+    const jobs = await this.loadPublicJobs(rows.map((row) => row.id));
+    return paginate(
+      jobs.map((job) => toPublicJobListItem(job, lang)),
+      total,
+      query,
+    );
   }
 }

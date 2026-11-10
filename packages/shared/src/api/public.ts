@@ -80,6 +80,16 @@ export interface PublicJobDetail extends Omit<PublicJobListItem, 'company' | 'ex
   isSaved?: boolean;
   /** Ứng viên đã nộp đơn vào tin này chưa (kể cả đơn đã rút); chỉ có khi là ứng viên. */
   hasApplied?: boolean;
+  /** Độ khớp kỹ năng 0–100 (hàm matchScore); chỉ có khi là ứng viên. */
+  matchScore?: number;
+  /** Kỹ năng của tin mà ứng viên có; chỉ có khi là ứng viên. */
+  matchedSkillIds?: string[];
+}
+
+/** Một tin trong `GET /me/recommended-jobs`: điểm cao trước, kèm kỹ năng khớp (tên theo `?lang`). */
+export interface RecommendedJob extends PublicJobListItem {
+  matchScore: number;
+  matchedSkills: PublicSkill[];
 }
 
 /** Một tin trong `GET /me/saved-jobs`. Tin đã đóng hay hết hạn vẫn hiện, kèm `isAcceptingApplications: false`. */

@@ -261,9 +261,9 @@ Trong cùng một transaction, server tạo đơn kèm `profileSnapshot` (hồ s
 
 ### 5.7 Gợi ý việc theo kỹ năng (nâng cao)
 
-- Hàm thuần `matchScore(candidateSkillIds, jobSkills)`: kỹ năng bắt buộc có trọng số 2, kỹ năng ưu tiên trọng số 1. Điểm bằng tổng trọng số khớp chia tổng trọng số của tin, quy ra thang 0–100.
-- `GET /me/recommended-jobs` lấy các tin công khai có ít nhất 1 kỹ năng trùng và bỏ tin đã nộp, sắp xếp theo điểm giảm dần, trả top 20 kèm `matchScore` và `matchedSkills`.
-- Chi tiết tin cũng trả `matchScore` khi người xem là candidate.
+- Hàm thuần `matchScore(candidateSkillIds, jobSkills)` trong `packages/shared`: kỹ năng bắt buộc có trọng số 2, kỹ năng ưu tiên trọng số 1. Điểm bằng tổng trọng số khớp chia tổng trọng số của tin, quy ra thang 0–100 và làm tròn; trả `{ score, matchedSkillIds }`. Mức thành thạo của ứng viên không tính; tin không có kỹ năng thì 0.
+- `GET /me/recommended-jobs` lấy các tin công khai có ít nhất 1 kỹ năng trùng và bỏ tin đã nộp (kể cả đơn đã rút), sắp xếp theo điểm giảm dần (bằng điểm thì tin mới đăng trước), trả top 20 kèm `matchScore` và `matchedSkills` (tên theo `?lang`). Hồ sơ chưa có kỹ năng thì trả mảng rỗng. SQL tính cùng công thức để sắp xếp; điểm trả ra tính lại bằng hàm thuần.
+- Chi tiết tin cũng trả `matchScore` và `matchedSkillIds` khi người xem là candidate.
 
 ### 5.8 Thông báo (nâng cao)
 
@@ -352,8 +352,8 @@ Khoảng 55 endpoint, prefix chung `/api/v1`. API công khai nhận `?lang=vi|en
 | Method | Path | Quyền | Ghi chú |
 | --- | --- | --- | --- |
 | GET | /jobs | Guest | Lọc theo `q`, `skills` (`?skills=a&skills=b`, `?skills=a,b` hoặc `?skills[]=a`; khớp khi tin có ít nhất một kỹ năng), `locationId`, `workMode`, `isPaid`; sắp xếp `newest`, `deadline` hoặc `relevance` (mặc định khi có `q`, theo `similarity` của pg_trgm) |
-| GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `isSaved`, `hasApplied` |
-| GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp |
+| GET | /jobs/:slug | Guest | Không có bản dịch theo lang thì 404; trả canonicalSlug để redirect khi slug lệch. Token không bắt buộc; có token candidate thì kèm `matchScore`, `matchedSkillIds`, `isSaved`, `hasApplied` |
+| GET | /me/recommended-jobs | Candidate | Nâng cao, top 20 theo độ khớp, bỏ tin đã nộp; mỗi tin kèm `matchScore`, `matchedSkills` |
 | GET | /companies | Guest |  |
 | GET | /companies/:slug | Guest | Chỉ công ty APPROVED |
 | GET | /companies/:slug/jobs | Guest |  |

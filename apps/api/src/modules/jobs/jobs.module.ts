@@ -13,6 +13,7 @@ import { SavedJobsService } from './saved-jobs.service';
 import { JobExpiryService } from './job-expiry.service';
 import { JobExpiryTask } from './job-expiry.task';
 import { JobsAdminService } from './jobs-admin.service';
+import { RecommendedJobsController } from './recommended-jobs.controller';
 import { RecruiterJobsController } from './recruiter-jobs.controller';
 import { RecruiterJobsService } from './recruiter-jobs.service';
 
@@ -22,7 +23,12 @@ import { RecruiterJobsService } from './recruiter-jobs.service';
     CompaniesModule,
     NotificationsModule,
   ],
-  controllers: [RecruiterJobsController, PublicJobsController, SavedJobsController],
+  controllers: [
+    RecruiterJobsController,
+    PublicJobsController,
+    SavedJobsController,
+    RecommendedJobsController,
+  ],
   providers: [
     RecruiterJobsService,
     PublicJobsService,
