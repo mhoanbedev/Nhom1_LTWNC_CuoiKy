@@ -20,7 +20,8 @@
     "format:check": "npm run format:check --workspaces --if-present",
     "test": "npm run build:shared && npm run test --workspaces --if-present",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
-    "dev:api": "npm run dev -w @ltwnc/api"
+    "dev:api": "npm run dev -w @ltwnc/api",
+    "dev:web": "npm run dev -w @ltwnc/web"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
